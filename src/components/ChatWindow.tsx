@@ -14,18 +14,22 @@ import {
   Copy,
   Check,
   Square,
+  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ModelPicker } from "@/components/ModelPicker";
 import { autoSelectModel, getModelById, CATEGORY_META } from "@/lib/models";
 import { ChatDB, type DBConversation } from "@/lib/chat-db";
+import { supabase } from "@/integrations/supabase/client";
+import { useCredits, FREE_CREDITS } from "@/hooks/use-credits";
 
 interface Props {
   conversation: DBConversation;
   onConversationChange: () => void | Promise<unknown>;
   onOpenSidebar: () => void;
   userEmail: string;
+  userId: string;
 }
 
 const TEXT_EXTS = [".txt", ".md", ".csv", ".json", ".log", ".html", ".xml", ".yaml", ".yml"];

@@ -96,13 +96,40 @@ export function ChatWindow({
     };
   }, [conversation.id]);
 
-  const transport = useMemo(() => new DefaultChatTransport({ api: "/api/chat" }), []);
+  const transport = useMemo(
+    () =>
+      new DefaultChatTransport({
+        api: "/api/chat",
+        fetch: async (url, init) => {
+          const { data } = await supabase.auth.getSession();
+          const token = data.session?.access_token;
+          const headers = new Headers(init?.headers);
+          if (token) headers.set("Authorization", `Bearer ${token}`);
+          const res = await fetch(url, { ...init, headers });
+          if (res.status === 402) {
+            // Parse friendly out-of-credits message
+            const text = await res.clone().text();
+            try {
+              const json = JSON.parse(text);
+              throw new Error(json.message ?? "You're out of free credits.");
+            } catch {
+              throw new Error("You're out of free credits.");
+            }
+          }
+          return res;
+        },
+      }),
+    [],
+  );
 
   const { messages, sendMessage, status, stop } = useChat({
     id: conversation.id,
     messages: initialMessages ?? [],
     transport,
     onError: (err) => toast.error(err.message || "Something went wrong"),
+    onFinish: () => {
+      refreshCredits();
+    },
   });
 
   const isLoading = status === "submitted" || status === "streaming";

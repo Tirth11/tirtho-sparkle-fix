@@ -458,10 +458,14 @@ export function ChatWindow({
                   submit();
                 }
               }}
-              placeholder={`Message TirthoAI… (Shift+Enter for newline)`}
+              placeholder={
+                outOfCredits
+                  ? "You've used all your free credits"
+                  : `Message TirthoAI… (Shift+Enter for newline)`
+              }
               rows={1}
-              className="flex-1 resize-none bg-transparent px-1 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
-              disabled={isLoading}
+              className="flex-1 resize-none bg-transparent px-1 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none disabled:cursor-not-allowed"
+              disabled={isLoading || outOfCredits}
             />
             {isLoading ? (
               <button

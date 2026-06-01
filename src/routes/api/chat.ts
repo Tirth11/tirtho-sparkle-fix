@@ -1,5 +1,6 @@
 import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
 import { DEFAULT_MODEL, getModelById } from "@/lib/models";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { createFileRoute } from "@tanstack/react-router";
 import { convertToModelMessages, streamText, type UIMessage } from "ai";
 
@@ -9,6 +10,39 @@ export const Route = createFileRoute("/api/chat")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        // --- Auth: require bearer token ---
+        const authHeader = request.headers.get("authorization") ?? "";
+        const token = authHeader.toLowerCase().startsWith("bearer ")
+          ? authHeader.slice(7).trim()
+          : "";
+        if (!token) {
+          return new Response("Unauthorized", { status: 401 });
+        }
+        const { data: userData, error: userErr } = await supabaseAdmin.auth.getUser(token);
+        if (userErr || !userData.user) {
+          return new Response("Unauthorized", { status: 401 });
+        }
+        const userId = userData.user.id;
+
+        // --- Credits: atomic decrement, block at 0 ---
+        const { data: remaining, error: creditErr } = await supabaseAdmin.rpc(
+          "consume_credit",
+          { _user_id: userId },
+        );
+        if (creditErr) {
+          return new Response("Could not check credits", { status: 500 });
+        }
+        if (typeof remaining === "number" && remaining < 0) {
+          return new Response(
+            JSON.stringify({
+              error: "out_of_credits",
+              message:
+                "You've used all 500 free credits. Free tier is exhausted — thanks for trying TirthoAI!",
+            }),
+            { status: 402, headers: { "Content-Type": "application/json" } },
+          );
+        }
+
         const body = (await request.json()) as ChatRequestBody;
         const { messages, modelId } = body;
         if (!Array.isArray(messages)) {
@@ -38,6 +72,7 @@ export const Route = createFileRoute("/api/chat")({
 
           return result.toUIMessageStreamResponse({
             originalMessages: messages as UIMessage[],
+            headers: { "x-credits-remaining": String(remaining ?? "") },
           });
         } catch (err) {
           const message = err instanceof Error ? err.message : "AI request failed";

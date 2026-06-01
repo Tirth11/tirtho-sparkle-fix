@@ -14,18 +14,22 @@ import {
   Copy,
   Check,
   Square,
+  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ModelPicker } from "@/components/ModelPicker";
 import { autoSelectModel, getModelById, CATEGORY_META } from "@/lib/models";
 import { ChatDB, type DBConversation } from "@/lib/chat-db";
+import { supabase } from "@/integrations/supabase/client";
+import { useCredits, FREE_CREDITS } from "@/hooks/use-credits";
 
 interface Props {
   conversation: DBConversation;
   onConversationChange: () => void | Promise<unknown>;
   onOpenSidebar: () => void;
   userEmail: string;
+  userId: string;
 }
 
 const TEXT_EXTS = [".txt", ".md", ".csv", ".json", ".log", ".html", ".xml", ".yaml", ".yml"];
@@ -57,7 +61,10 @@ export function ChatWindow({
   onConversationChange,
   onOpenSidebar,
   userEmail,
+  userId,
 }: Props) {
+  const { credits, refresh: refreshCredits } = useCredits(userId);
+  const outOfCredits = credits !== null && credits <= 0;
   const [modelId, setModelId] = useState(conversation.model_id);
   const [autoMode, setAutoMode] = useState(true);
   const [input, setInput] = useState("");
@@ -89,13 +96,40 @@ export function ChatWindow({
     };
   }, [conversation.id]);
 
-  const transport = useMemo(() => new DefaultChatTransport({ api: "/api/chat" }), []);
+  const transport = useMemo(
+    () =>
+      new DefaultChatTransport({
+        api: "/api/chat",
+        fetch: async (url, init) => {
+          const { data } = await supabase.auth.getSession();
+          const token = data.session?.access_token;
+          const headers = new Headers(init?.headers);
+          if (token) headers.set("Authorization", `Bearer ${token}`);
+          const res = await fetch(url, { ...init, headers });
+          if (res.status === 402) {
+            // Parse friendly out-of-credits message
+            const text = await res.clone().text();
+            try {
+              const json = JSON.parse(text);
+              throw new Error(json.message ?? "You're out of free credits.");
+            } catch {
+              throw new Error("You're out of free credits.");
+            }
+          }
+          return res;
+        },
+      }),
+    [],
+  );
 
   const { messages, sendMessage, status, stop } = useChat({
     id: conversation.id,
     messages: initialMessages ?? [],
     transport,
     onError: (err) => toast.error(err.message || "Something went wrong"),
+    onFinish: () => {
+      refreshCredits();
+    },
   });
 
   const isLoading = status === "submitted" || status === "streaming";
@@ -161,6 +195,10 @@ export function ChatWindow({
     const raw = (textOverride ?? input).trim();
     if (!raw && attachments.length === 0) return;
     if (isLoading) return;
+    if (outOfCredits) {
+      toast.error("You're out of free credits. Free tier is exhausted.");
+      return;
+    }
 
     const hasImage = attachments.some((f) => f.type.startsWith("image/"));
 
@@ -258,17 +296,41 @@ export function ChatWindow({
             {conversation.title}
           </h1>
         </div>
-        <ModelPicker
-          modelId={modelId}
-          onChange={(id) => {
-            setModelId(id);
-            setAutoMode(false);
-            ChatDB.updateConversation(conversation.id, { model_id: id }).catch(console.error);
-          }}
-          autoMode={autoMode}
-          onAutoToggle={setAutoMode}
-        />
+        <div className="flex items-center gap-2">
+          {credits !== null && (
+            <span
+              className={cn(
+                "hidden sm:inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold",
+                outOfCredits
+                  ? "border-destructive/40 bg-destructive/10 text-destructive"
+                  : credits < 50
+                    ? "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                    : "border-primary/30 bg-primary/5 text-primary",
+              )}
+              title={`${credits} of ${FREE_CREDITS} free credits remaining`}
+            >
+              <Zap className="h-3 w-3" />
+              {credits}/{FREE_CREDITS}
+            </span>
+          )}
+          <ModelPicker
+            modelId={modelId}
+            onChange={(id) => {
+              setModelId(id);
+              setAutoMode(false);
+              ChatDB.updateConversation(conversation.id, { model_id: id }).catch(console.error);
+            }}
+            autoMode={autoMode}
+            onAutoToggle={setAutoMode}
+          />
+        </div>
       </header>
+
+      {outOfCredits && (
+        <div className="border-b border-destructive/30 bg-destructive/10 px-4 py-2.5 text-center text-xs font-medium text-destructive sm:px-6">
+          You've used all {FREE_CREDITS} free credits. The free tier is exhausted — thanks for trying TirthoAI!
+        </div>
+      )}
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6 sm:px-6">
         <div className="mx-auto max-w-3xl space-y-6">
@@ -396,10 +458,14 @@ export function ChatWindow({
                   submit();
                 }
               }}
-              placeholder={`Message TirthoAI… (Shift+Enter for newline)`}
+              placeholder={
+                outOfCredits
+                  ? "You've used all your free credits"
+                  : `Message TirthoAI… (Shift+Enter for newline)`
+              }
               rows={1}
-              className="flex-1 resize-none bg-transparent px-1 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
-              disabled={isLoading}
+              className="flex-1 resize-none bg-transparent px-1 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none disabled:cursor-not-allowed"
+              disabled={isLoading || outOfCredits}
             />
             {isLoading ? (
               <button
@@ -414,7 +480,7 @@ export function ChatWindow({
             ) : (
               <button
                 type="submit"
-                disabled={!input.trim() && attachments.length === 0}
+                disabled={(!input.trim() && attachments.length === 0) || outOfCredits}
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-primary-foreground shadow-md transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                 style={{ background: "var(--gradient-primary)" }}
                 aria-label="Send"

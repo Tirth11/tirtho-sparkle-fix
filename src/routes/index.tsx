@@ -25,10 +25,10 @@ function Index() {
     return <AuthScreen />;
   }
 
-  return <ChatLayout userEmail={session.user.email ?? "User"} />;
+  return <ChatLayout userEmail={session.user.email ?? "User"} userId={session.user.id} />;
 }
 
-function ChatLayout({ userEmail }: { userEmail: string }) {
+function ChatLayout({ userEmail, userId }: { userEmail: string; userId: string }) {
   const [conversations, setConversations] = useState<DBConversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
@@ -125,6 +125,7 @@ function ChatLayout({ userEmail }: { userEmail: string }) {
             onConversationChange={refresh}
             onOpenSidebar={() => setSidebarOpen(true)}
             userEmail={userEmail}
+            userId={userId}
           />
         )}
       </main>

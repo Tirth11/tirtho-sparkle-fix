@@ -296,17 +296,41 @@ export function ChatWindow({
             {conversation.title}
           </h1>
         </div>
-        <ModelPicker
-          modelId={modelId}
-          onChange={(id) => {
-            setModelId(id);
-            setAutoMode(false);
-            ChatDB.updateConversation(conversation.id, { model_id: id }).catch(console.error);
-          }}
-          autoMode={autoMode}
-          onAutoToggle={setAutoMode}
-        />
+        <div className="flex items-center gap-2">
+          {credits !== null && (
+            <span
+              className={cn(
+                "hidden sm:inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold",
+                outOfCredits
+                  ? "border-destructive/40 bg-destructive/10 text-destructive"
+                  : credits < 50
+                    ? "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                    : "border-primary/30 bg-primary/5 text-primary",
+              )}
+              title={`${credits} of ${FREE_CREDITS} free credits remaining`}
+            >
+              <Zap className="h-3 w-3" />
+              {credits}/{FREE_CREDITS}
+            </span>
+          )}
+          <ModelPicker
+            modelId={modelId}
+            onChange={(id) => {
+              setModelId(id);
+              setAutoMode(false);
+              ChatDB.updateConversation(conversation.id, { model_id: id }).catch(console.error);
+            }}
+            autoMode={autoMode}
+            onAutoToggle={setAutoMode}
+          />
+        </div>
       </header>
+
+      {outOfCredits && (
+        <div className="border-b border-destructive/30 bg-destructive/10 px-4 py-2.5 text-center text-xs font-medium text-destructive sm:px-6">
+          You've used all {FREE_CREDITS} free credits. The free tier is exhausted — thanks for trying TirthoAI!
+        </div>
+      )}
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6 sm:px-6">
         <div className="mx-auto max-w-3xl space-y-6">

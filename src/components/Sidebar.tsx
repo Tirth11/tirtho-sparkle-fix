@@ -73,11 +73,15 @@ export function Sidebar({
 }: Props) {
   const { theme, toggle } = useTheme();
   const { credits } = useCredits(userId);
+  const { profile } = useProfile();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [creditsOpen, setCreditsOpen] = useState(false);
+  const displayName = profile?.display_name?.trim() || userEmail.split("@")[0] || "You";
+  const avatarUrl = profile?.avatar_url ?? null;
+  const initial = (displayName || userEmail || "U").slice(0, 1).toUpperCase();
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();

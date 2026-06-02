@@ -6,6 +6,7 @@ export interface DBConversation {
   title: string;
   category: string;
   model_id: string;
+  model_updated_at: string;
   created_at: string;
   updated_at: string;
 }
@@ -41,8 +42,13 @@ export const ChatDB = {
     return data as DBConversation;
   },
 
-  async updateConversation(id: string, patch: Partial<Pick<DBConversation, "title" | "model_id" | "category">>) {
-    const { error } = await supabase.from("conversations").update(patch).eq("id", id);
+  async updateConversation(
+    id: string,
+    patch: Partial<Pick<DBConversation, "title" | "model_id" | "category">>,
+  ) {
+    const fullPatch: Partial<Pick<DBConversation, "title" | "model_id" | "category" | "model_updated_at">> = { ...patch };
+    if (patch.model_id) fullPatch.model_updated_at = new Date().toISOString();
+    const { error } = await supabase.from("conversations").update(fullPatch).eq("id", id);
     if (error) throw error;
   },
 

@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { ModelPicker } from "@/components/ModelPicker";
 import { autoSelectModel, getModelById, CATEGORY_META } from "@/lib/models";
 import { ChatDB, type DBConversation } from "@/lib/chat-db";
+import { ModelCache } from "@/lib/model-cache";
 import { supabase } from "@/integrations/supabase/client";
 import { useCredits, FREE_CREDITS } from "@/hooks/use-credits";
 import {
@@ -43,6 +44,20 @@ interface Props {
 }
 
 const TEXT_EXTS = [".txt", ".md", ".csv", ".json", ".log", ".html", ".xml", ".yaml", ".yml"];
+
+function formatRelativeTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  if (Number.isNaN(diff)) return "just now";
+  const s = Math.floor(diff / 1000);
+  if (s < 5) return "just now";
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  return `${d}d ago`;
+}
 
 async function readTextFile(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -91,7 +106,11 @@ export function ChatWindow({
   const totalCredits = guest ? GUEST_FREE_CREDITS : FREE_CREDITS;
   const outOfCredits = credits !== null && credits <= 0;
   const [showSignup, setShowSignup] = useState(false);
-  const [modelId, setModelId] = useState(conversation.model_id);
+  const cached = ModelCache.get(conversation.id);
+  const [modelId, setModelId] = useState(cached?.modelId ?? conversation.model_id);
+  const [modelUpdatedAt, setModelUpdatedAt] = useState<string>(
+    cached?.updatedAt ?? conversation.model_updated_at ?? conversation.updated_at,
+  );
   const [autoMode, setAutoMode] = useState(true);
   const [input, setInput] = useState("");
   const [attachments, setAttachments] = useState<File[]>([]);
@@ -257,11 +276,13 @@ export function ChatWindow({
   };
 
   useEffect(() => {
-    setModelId(conversation.model_id);
+    const c = ModelCache.get(conversation.id);
+    setModelId(c?.modelId ?? conversation.model_id);
+    setModelUpdatedAt(c?.updatedAt ?? conversation.model_updated_at ?? conversation.updated_at);
     setInput("");
     setAttachments([]);
     stickToBottomRef.current = true;
-  }, [conversation.id, conversation.model_id]);
+  }, [conversation.id, conversation.model_id, conversation.model_updated_at, conversation.updated_at]);
 
   useEffect(() => {
     const ta = textareaRef.current;
@@ -313,10 +334,14 @@ export function ChatWindow({
       useModelId = "google/gemini-2.5-pro";
     }
     setModelId(useModelId);
-    if (useModelId !== conversation.model_id && !guest) {
-      ChatDB.updateConversation(conversation.id, { model_id: useModelId })
-        .then(onConversationChange)
-        .catch(console.error);
+    if (useModelId !== conversation.model_id) {
+      ModelCache.set(conversation.id, useModelId);
+      setModelUpdatedAt(new Date().toISOString());
+      if (!guest) {
+        ChatDB.updateConversation(conversation.id, { model_id: useModelId })
+          .then(onConversationChange)
+          .catch(console.error);
+      }
     }
 
     if (messages.length === 0 && !guest) {
@@ -429,21 +454,31 @@ export function ChatWindow({
               {credits}/{totalCredits}
             </span>
           )}
-          <ModelPicker
-            modelId={modelId}
-            onChange={(id) => {
-              setModelId(id);
-              setAutoMode(false);
-              if (!guest) {
-                ChatDB.updateConversation(conversation.id, { model_id: id })
-                  .then(onConversationChange)
-                  .catch(console.error);
-              }
-            }}
-            autoMode={autoMode}
-            onAutoToggle={setAutoMode}
-            hideUserModels={guest}
-          />
+          <div className="flex flex-col items-end gap-0.5">
+            <ModelPicker
+              modelId={modelId}
+              onChange={(id) => {
+                setModelId(id);
+                setAutoMode(false);
+                ModelCache.set(conversation.id, id);
+                setModelUpdatedAt(new Date().toISOString());
+                if (!guest) {
+                  ChatDB.updateConversation(conversation.id, { model_id: id })
+                    .then(onConversationChange)
+                    .catch(console.error);
+                }
+              }}
+              autoMode={autoMode}
+              onAutoToggle={setAutoMode}
+              hideUserModels={guest}
+            />
+            <span
+              className="text-[10px] text-muted-foreground/70 tabular-nums"
+              title={`Model last changed at ${new Date(modelUpdatedAt).toLocaleString()} by ${userEmail}`}
+            >
+              changed {formatRelativeTime(modelUpdatedAt)} · {userEmail}
+            </span>
+          </div>
         </div>
 
       </header>

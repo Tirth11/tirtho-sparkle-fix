@@ -5,8 +5,13 @@ import { toast } from "sonner";
 import { setRemember } from "@/lib/remember-me";
 import { ForgotPasswordModal } from "@/components/ForgotPasswordModal";
 
-export function AuthScreen() {
-  const [mode, setMode] = useState<"signin" | "signup">("signup");
+interface AuthScreenProps {
+  initialMode?: "signin" | "signup";
+  onContinueAsGuest?: () => void;
+}
+
+export function AuthScreen({ initialMode = "signup", onContinueAsGuest }: AuthScreenProps = {}) {
+  const [mode, setMode] = useState<"signin" | "signup">(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");

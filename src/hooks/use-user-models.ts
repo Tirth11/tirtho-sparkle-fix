@@ -29,6 +29,7 @@ export interface UpdateModelInput {
 }
 
 export function useUserModels() {
+  const { session } = useAuthSession();
   const list = useServerFn(listUserModels);
   const add = useServerFn(addUserModel);
   const update = useServerFn(updateUserModel);
@@ -38,6 +39,11 @@ export function useUserModels() {
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
+    if (!session) {
+      setModels([]);
+      setLoading(false);
+      return;
+    }
     try {
       const res = await list();
       setModels(res.models);
@@ -46,7 +52,7 @@ export function useUserModels() {
     } finally {
       setLoading(false);
     }
-  }, [list]);
+  }, [list, session]);
 
   useEffect(() => {
     refresh();

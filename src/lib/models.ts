@@ -49,16 +49,6 @@ export const MODELS: ModelConfig[] = [
   { label: "Mistral Small 3.1", id: "mistralai/mistral-small-24b-instruct", provider: "nvidia", category: "general", badge: "🌬️", description: "Mistral Small via NVIDIA" },
   { label: "Nemotron 70B", id: "nvidia/llama-3.1-nemotron-70b-instruct", provider: "nvidia", category: "reasoning", badge: "⚙️", description: "NVIDIA Nemotron 70B" },
   { label: "Qwen 3 235B", id: "qwen/qwen3-235b-a22b", provider: "nvidia", category: "reasoning", badge: "🧠", description: "Qwen 3 MoE via NVIDIA" },
-
-  // Anthropic Claude (requires ANTHROPIC_API_KEY)
-  { label: "Claude Sonnet 4.5", id: "claude-sonnet-4-5", provider: "anthropic", category: "reasoning", badge: "🎼", description: "Anthropic Claude Sonnet 4.5" },
-  { label: "Claude Opus 4.1", id: "claude-opus-4-1", provider: "anthropic", category: "reasoning", badge: "🪕", description: "Anthropic Claude Opus 4.1 — top quality" },
-  { label: "Claude Haiku 4.5", id: "claude-haiku-4-5", provider: "anthropic", category: "general", badge: "🍃", description: "Fast, cheap Claude Haiku" },
-
-  // Perplexity Sonar (requires PERPLEXITY_API_KEY) — web-grounded answers
-  { label: "Sonar", id: "sonar", provider: "perplexity", category: "general", badge: "🔎", description: "Perplexity web-grounded search" },
-  { label: "Sonar Pro", id: "sonar-pro", provider: "perplexity", category: "reasoning", badge: "🛰️", description: "Perplexity multi-step research with citations" },
-  { label: "Sonar Reasoning", id: "sonar-reasoning", provider: "perplexity", category: "reasoning", badge: "🧭", description: "Chain-of-thought with live search" },
 ];
 
 

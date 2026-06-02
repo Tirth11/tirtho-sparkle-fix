@@ -303,25 +303,38 @@ export function Sidebar({
 
         {/* Footer */}
         <div className="shrink-0 border-t border-sidebar-border px-3 py-3">
-          <div className="mb-2 flex items-center gap-2 rounded-lg bg-background/40 px-2.5 py-2">
-            <div
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white"
-              style={{ background: "var(--gradient-primary)" }}
-            >
-              {userEmail.slice(0, 1).toUpperCase()}
+          <Link
+            to="/settings"
+            onClick={onClose}
+            className="mb-2 flex items-center gap-2 rounded-lg bg-background/40 px-2 py-2 transition hover:bg-sidebar-accent/60"
+            title="Open settings"
+          >
+            <Avatar className="h-8 w-8 ring-1 ring-sidebar-border">
+              {avatarUrl && <AvatarImage src={avatarUrl} alt="" />}
+              <AvatarFallback
+                className="text-[11px] font-bold text-white"
+                style={{ background: "var(--gradient-primary)" }}
+              >
+                {initial}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 flex-1 text-left">
+              <div className="truncate text-xs font-semibold">{displayName}</div>
+              <div className="truncate text-[10px] text-muted-foreground" title={userEmail}>
+                {userEmail}
+              </div>
             </div>
-            <span className="flex-1 truncate text-xs" title={userEmail}>
-              {userEmail}
-            </span>
-            <button
-              onClick={onSignOut}
-              className="rounded p-1 text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground"
-              aria-label="Sign out"
-              title="Sign out"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-            </button>
-          </div>
+            <SettingsIcon className="h-3.5 w-3.5 text-muted-foreground" />
+          </Link>
+
+          <button
+            onClick={onSignOut}
+            className="mb-2 flex w-full items-center gap-2 rounded-lg border border-sidebar-border bg-background/40 px-3 py-2 text-xs font-medium hover:bg-sidebar-accent/60"
+            title="Sign out"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            <span className="flex-1 text-left">Sign out</span>
+          </button>
 
           {/* Credits button — opens history modal */}
           <button

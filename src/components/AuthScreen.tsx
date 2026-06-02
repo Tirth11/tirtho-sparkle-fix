@@ -24,6 +24,8 @@ export function AuthScreen({ initialMode = "signup", onContinueAsGuest }: AuthSc
     password?: string;
     confirm?: string;
   }>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
 
   const validate = (): boolean => {
     const next: typeof errors = {};
@@ -42,6 +44,7 @@ export function AuthScreen({ initialMode = "signup", onContinueAsGuest }: AuthSc
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError(null);
     if (!validate()) return;
     setLoading(true);
     try {
@@ -71,7 +74,14 @@ export function AuthScreen({ initialMode = "signup", onContinueAsGuest }: AuthSc
         toast.success("Welcome back!");
       }
     } catch (err) {
+      // Surface the raw Supabase error in the UI so the user can see exactly
+      // why signup/signin failed, plus a friendly toast on top.
       const raw = err instanceof Error ? err.message : "Authentication failed";
+      const status = (err as { status?: number })?.status;
+      const code = (err as { code?: string })?.code;
+      const detail = [code, status].filter(Boolean).join(" · ");
+      setSubmitError(detail ? `${raw} (${detail})` : raw);
+
       let msg = raw;
       if (/pwned|leaked|compromis|weak.*password|too.*weak/i.test(raw)) {
         msg = "This password has been found in a data breach. Please choose a stronger, unique password.";
@@ -84,8 +94,9 @@ export function AuthScreen({ initialMode = "signup", onContinueAsGuest }: AuthSc
     } finally {
       setLoading(false);
     }
-
   };
+
+
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
@@ -166,7 +177,15 @@ export function AuthScreen({ initialMode = "signup", onContinueAsGuest }: AuthSc
               {errors.password && (
                 <p className="mt-1 text-[11px] text-destructive">{errors.password}</p>
               )}
+              {mode === "signup" && !errors.password && (
+                <ul className="mt-1.5 space-y-0.5 text-[11px] text-muted-foreground">
+                  <li>• At least 8 characters</li>
+                  <li>• Letters, numbers, and symbols (!@#$%^&* …) allowed</li>
+                  <li>• Avoid common or previously breached passwords</li>
+                </ul>
+              )}
             </div>
+
 
             {mode === "signup" && (
               <div>
@@ -213,6 +232,16 @@ export function AuthScreen({ initialMode = "signup", onContinueAsGuest }: AuthSc
                 </button>
               )}
             </div>
+
+            {submitError && (
+              <div
+                role="alert"
+                className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive"
+              >
+                <div className="font-semibold mb-0.5">Supabase error</div>
+                <div className="break-words font-mono text-[11px] leading-snug">{submitError}</div>
+              </div>
+            )}
 
             <button
               type="submit"

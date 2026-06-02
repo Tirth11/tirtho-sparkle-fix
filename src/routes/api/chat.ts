@@ -1,4 +1,4 @@
-import { createLovableAiGatewayProvider, createNvidiaProvider } from "@/lib/ai-gateway.server";
+import { createLovableAiGatewayProvider, createNvidiaProvider, createAnthropicProvider, createPerplexityProvider } from "@/lib/ai-gateway.server";
 import { DEFAULT_MODEL, getModelById } from "@/lib/models";
 import { isUserModelId, userModelRowId } from "@/lib/user-models-shared";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";

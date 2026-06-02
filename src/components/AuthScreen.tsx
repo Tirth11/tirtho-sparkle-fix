@@ -30,7 +30,8 @@ export function AuthScreen({ initialMode = "signup", onContinueAsGuest }: AuthSc
     if (!email) next.email = "Email is required";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) next.email = "Enter a valid email";
     if (!password) next.password = "Password is required";
-    else if (password.length < 6) next.password = "At least 6 characters";
+    else if (password.length < 8) next.password = "At least 8 characters";
+
     if (mode === "signup") {
       if (!confirm) next.confirm = "Please confirm your password";
       else if (confirm !== password) next.confirm = "Passwords do not match";

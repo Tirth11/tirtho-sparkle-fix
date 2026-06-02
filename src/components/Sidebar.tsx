@@ -362,5 +362,6 @@ export function Sidebar({
         currentCredits={credits}
       />
       <ProviderSettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+    </>
   );
 }

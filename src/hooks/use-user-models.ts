@@ -6,6 +6,7 @@ import {
   updateUserModel,
   deleteUserModel,
 } from "@/lib/user-models.functions";
+import { useAuthSession } from "@/hooks/use-auth";
 import type { UserModelDTO, UserModelCategory, UserModelProvider } from "@/lib/user-models-shared";
 
 export interface AddModelInput {

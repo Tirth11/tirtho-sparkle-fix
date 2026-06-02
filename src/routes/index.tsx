@@ -71,8 +71,8 @@ function GuestLayout({ onGoToAuth }: { onGoToAuth: (mode: "signin" | "signup") =
     updated_at: new Date().toISOString(),
   };
   return (
-    <div className="flex h-screen overflow-hidden bg-background text-foreground">
-      <main className="flex-1 min-w-0">
+    <div className="flex h-dvh min-h-0 overflow-hidden bg-background text-foreground">
+      <main className="min-h-0 min-w-0 flex-1">
         <ChatWindow
           key="guest"
           conversation={conversation}
@@ -163,7 +163,7 @@ function ChatLayout({ userEmail, userId }: { userEmail: string; userId: string }
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background text-foreground">
+    <div className="flex h-dvh min-h-0 overflow-hidden bg-background text-foreground">
       <Sidebar
         conversations={conversations}
         activeId={activeId}
@@ -177,7 +177,7 @@ function ChatLayout({ userEmail, userId }: { userEmail: string; userId: string }
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
-      <main className="flex-1 min-w-0">
+      <main className="min-h-0 min-w-0 flex-1">
         {active && (
           <ChatWindow
             key={active.id}

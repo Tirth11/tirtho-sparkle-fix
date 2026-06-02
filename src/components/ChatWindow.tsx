@@ -567,6 +567,17 @@ export function ChatWindow({
         </div>
       </div>
     </div>
+
+      {guest && (
+        <SignupPrompt
+          open={showSignup}
+          variant={outOfCredits ? "exhausted" : "soft"}
+          onClose={() => setShowSignup(false)}
+          onSignUp={() => onGuestSignUp?.()}
+          onSignIn={() => onGuestSignIn?.()}
+        />
+      )}
+    </>
   );
 }
 

@@ -11,10 +11,63 @@ import {
 const VALID_PROVIDERS = PROVIDER_PRESETS.map((p) => p.id) as [string, ...string[]];
 const VALID_CATEGORIES = ["reasoning", "coding", "creative", "vision", "general"] as const;
 
+// Block SSRF: only allow https:// to public hostnames. Reject loopback,
+// private (RFC1918), link-local, unique-local IPv6, and obvious metadata hosts.
+const BLOCKED_HOSTS = new Set([
+  "localhost",
+  "metadata.google.internal",
+  "metadata",
+  "instance-data",
+]);
+function isBlockedHost(host: string): boolean {
+  const h = host.toLowerCase();
+  if (BLOCKED_HOSTS.has(h)) return true;
+  // strip brackets for IPv6
+  const bare = h.startsWith("[") && h.endsWith("]") ? h.slice(1, -1) : h;
+  // IPv4
+  const v4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(bare);
+  if (v4) {
+    const [a, b] = [Number(v4[1]), Number(v4[2])];
+    if (a === 10) return true;
+    if (a === 127) return true;
+    if (a === 0) return true;
+    if (a === 169 && b === 254) return true; // link-local / AWS IMDS
+    if (a === 172 && b >= 16 && b <= 31) return true;
+    if (a === 192 && b === 168) return true;
+    if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT
+    if (a >= 224) return true; // multicast / reserved
+    return false;
+  }
+  // IPv6 — block loopback, unspecified, unique-local (fc/fd), link-local (fe80)
+  if (bare.includes(":")) {
+    if (bare === "::1" || bare === "::") return true;
+    if (/^f[cd][0-9a-f]{2}:/i.test(bare)) return true;
+    if (/^fe80:/i.test(bare)) return true;
+    return false;
+  }
+  return false;
+}
+const safeBaseUrl = z
+  .string()
+  .trim()
+  .url()
+  .max(500)
+  .refine((v) => {
+    try {
+      const u = new URL(v);
+      if (u.protocol !== "https:") return false;
+      if (!u.hostname) return false;
+      if (isBlockedHost(u.hostname)) return false;
+      return true;
+    } catch {
+      return false;
+    }
+  }, "base_url must be an https URL to a public host");
+
 const AddInput = z.object({
   label: z.string().trim().min(1).max(80),
   provider: z.enum(VALID_PROVIDERS),
-  base_url: z.string().trim().url().max(500),
+  base_url: safeBaseUrl,
   model_id: z.string().trim().min(1).max(200),
   api_key: z.string().trim().min(4).max(500),
   category: z.enum(VALID_CATEGORIES).default("general"),
@@ -23,11 +76,12 @@ const AddInput = z.object({
 const UpdateInput = z.object({
   id: z.string().uuid(),
   label: z.string().trim().min(1).max(80).optional(),
-  base_url: z.string().trim().url().max(500).optional(),
+  base_url: safeBaseUrl.optional(),
   model_id: z.string().trim().min(1).max(200).optional(),
   api_key: z.string().trim().min(4).max(500).optional(),
   category: z.enum(VALID_CATEGORIES).optional(),
   enabled: z.boolean().optional(),
+
 });
 
 type Row = {

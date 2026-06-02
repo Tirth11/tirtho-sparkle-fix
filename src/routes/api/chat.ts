@@ -12,37 +12,57 @@ export const Route = createFileRoute("/api/chat")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        // --- Auth: require bearer token ---
+        // --- Auth: bearer OR guest header ---
         const authHeader = request.headers.get("authorization") ?? "";
         const token = authHeader.toLowerCase().startsWith("bearer ")
           ? authHeader.slice(7).trim()
           : "";
-        if (!token) {
-          return new Response("Unauthorized", { status: 401 });
-        }
-        const { data: userData, error: userErr } = await supabaseAdmin.auth.getUser(token);
-        if (userErr || !userData.user) {
-          return new Response("Unauthorized", { status: 401 });
-        }
-        const userId = userData.user.id;
+        const guestId = (request.headers.get("x-guest-id") ?? "").trim();
 
-        // --- Credits: atomic decrement, block at 0 ---
-        const { data: remaining, error: creditErr } = await supabaseAdmin.rpc(
-          "consume_credit",
-          { _user_id: userId },
-        );
-        if (creditErr) {
-          return new Response("Could not check credits", { status: 500 });
-        }
-        if (typeof remaining === "number" && remaining < 0) {
-          return new Response(
-            JSON.stringify({
-              error: "out_of_credits",
-              message:
-                "You've used all 500 free credits. Free tier is exhausted — thanks for trying TirthoAI!",
-            }),
-            { status: 402, headers: { "Content-Type": "application/json" } },
+        let userId: string | null = null;
+        let isGuest = false;
+        let remaining: number | null = null;
+
+        if (token) {
+          const { data: userData, error: userErr } = await supabaseAdmin.auth.getUser(token);
+          if (userErr || !userData.user) {
+            return new Response("Unauthorized", { status: 401 });
+          }
+          userId = userData.user.id;
+          const { data: r, error: creditErr } = await supabaseAdmin.rpc(
+            "consume_credit",
+            { _user_id: userId },
           );
+          if (creditErr) return new Response("Could not check credits", { status: 500 });
+          if (typeof r === "number" && r < 0) {
+            return new Response(
+              JSON.stringify({
+                error: "out_of_credits",
+                message: "You've used all 500 free credits.",
+              }),
+              { status: 402, headers: { "Content-Type": "application/json" } },
+            );
+          }
+          remaining = typeof r === "number" ? r : null;
+        } else if (guestId && /^[A-Za-z0-9_-]{8,128}$/.test(guestId)) {
+          isGuest = true;
+          const { data: r, error: gErr } = await supabaseAdmin.rpc(
+            "consume_guest_credit",
+            { _guest_id: guestId, _limit: 50 },
+          );
+          if (gErr) return new Response("Could not check guest credits", { status: 500 });
+          if (typeof r === "number" && r < 0) {
+            return new Response(
+              JSON.stringify({
+                error: "out_of_guest_credits",
+                message: "You've used your 50 free guest messages. Sign up to keep going.",
+              }),
+              { status: 402, headers: { "Content-Type": "application/json" } },
+            );
+          }
+          remaining = typeof r === "number" ? r : null;
+        } else {
+          return new Response("Unauthorized", { status: 401 });
         }
 
         const body = (await request.json()) as ChatRequestBody;
@@ -63,6 +83,12 @@ export const Route = createFileRoute("/api/chat")({
         let provider: "lovable" | "nvidia" | "user" = "lovable";
 
         if (isUserModelId(requestedId)) {
+          if (isGuest || !userId) {
+            return new Response(
+              JSON.stringify({ error: "guest_no_user_models", message: "Sign up to use custom models." }),
+              { status: 403, headers: { "Content-Type": "application/json" } },
+            );
+          }
           // User-added (BYO) model — look up row, decrypt key, call OpenAI-compatible endpoint.
           const rowId = userModelRowId(requestedId);
           const { data: row, error: rowErr } = await supabaseAdmin
@@ -202,7 +228,10 @@ export const Route = createFileRoute("/api/chat")({
 
           return result.toUIMessageStreamResponse({
             originalMessages: messages as UIMessage[],
-            headers: { "x-credits-remaining": String(remaining ?? "") },
+            headers: {
+              "x-credits-remaining": String(remaining ?? ""),
+              ...(isGuest ? { "x-guest-remaining": String(remaining ?? "") } : {}),
+            },
             onError: (error) => {
               const c = classifyProviderError(error);
               return JSON.stringify({ error: c.code, message: c.message });

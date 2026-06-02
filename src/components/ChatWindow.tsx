@@ -23,6 +23,13 @@ import { autoSelectModel, getModelById, CATEGORY_META } from "@/lib/models";
 import { ChatDB, type DBConversation } from "@/lib/chat-db";
 import { supabase } from "@/integrations/supabase/client";
 import { useCredits, FREE_CREDITS } from "@/hooks/use-credits";
+import {
+  GUEST_FREE_CREDITS,
+  getGuestId,
+  getGuestRemaining,
+  setGuestRemaining,
+} from "@/lib/guest";
+import { SignupPrompt } from "@/components/SignupPrompt";
 
 interface Props {
   conversation: DBConversation;
@@ -30,6 +37,9 @@ interface Props {
   onOpenSidebar: () => void;
   userEmail: string;
   userId: string;
+  guest?: boolean;
+  onGuestSignUp?: () => void;
+  onGuestSignIn?: () => void;
 }
 
 const TEXT_EXTS = [".txt", ".md", ".csv", ".json", ".log", ".html", ".xml", ".yaml", ".yml"];
@@ -62,9 +72,25 @@ export function ChatWindow({
   onOpenSidebar,
   userEmail,
   userId,
+  guest = false,
+  onGuestSignUp,
+  onGuestSignIn,
 }: Props) {
-  const { credits, refresh: refreshCredits } = useCredits(userId);
+  const { credits: authedCredits, refresh: refreshCredits } = useCredits(guest ? undefined : userId);
+  const [guestCredits, setGuestCreditsState] = useState<number>(() =>
+    guest ? getGuestRemaining() : GUEST_FREE_CREDITS,
+  );
+  useEffect(() => {
+    if (!guest) return;
+    const sync = () => setGuestCreditsState(getGuestRemaining());
+    window.addEventListener("guest-credits-changed", sync);
+    return () => window.removeEventListener("guest-credits-changed", sync);
+  }, [guest]);
+
+  const credits = guest ? guestCredits : authedCredits;
+  const totalCredits = guest ? GUEST_FREE_CREDITS : FREE_CREDITS;
   const outOfCredits = credits !== null && credits <= 0;
+  const [showSignup, setShowSignup] = useState(false);
   const [modelId, setModelId] = useState(conversation.model_id);
   const [autoMode, setAutoMode] = useState(true);
   const [input, setInput] = useState("");
@@ -81,6 +107,12 @@ export function ChatWindow({
     let alive = true;
     setInitialMessages(null);
     persistedIdsRef.current = new Set();
+    if (guest) {
+      setInitialMessages([]);
+      return () => {
+        alive = false;
+      };
+    }
     ChatDB.listMessages(conversation.id)
       .then((msgs) => {
         if (!alive) return;
@@ -94,32 +126,50 @@ export function ChatWindow({
     return () => {
       alive = false;
     };
-  }, [conversation.id]);
+  }, [conversation.id, guest]);
 
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
         api: "/api/chat",
         fetch: async (url, init) => {
-          const { data } = await supabase.auth.getSession();
-          const token = data.session?.access_token;
           const headers = new Headers(init?.headers);
-          if (token) headers.set("Authorization", `Bearer ${token}`);
+          if (guest) {
+            headers.set("x-guest-id", getGuestId());
+          } else {
+            const { data } = await supabase.auth.getSession();
+            const token = data.session?.access_token;
+            if (token) headers.set("Authorization", `Bearer ${token}`);
+          }
           const res = await fetch(url, { ...init, headers });
+          if (guest) {
+            const r = res.headers.get("x-guest-remaining");
+            if (r !== null && r !== "") {
+              const n = Number(r);
+              if (Number.isFinite(n)) setGuestRemaining(n);
+            }
+          }
           if (res.status === 402) {
-            // Parse friendly out-of-credits message
             const text = await res.clone().text();
+            let code = "";
+            let msg = "You're out of free credits.";
             try {
               const json = JSON.parse(text);
-              throw new Error(json.message ?? "You're out of free credits.");
+              code = json.error ?? "";
+              msg = json.message ?? msg;
             } catch {
-              throw new Error("You're out of free credits.");
+              /* ignore */
             }
+            if (guest || code === "out_of_guest_credits") {
+              setGuestRemaining(0);
+              setShowSignup(true);
+            }
+            throw new Error(msg);
           }
           return res;
         },
       }),
-    [],
+    [guest],
   );
 
   const { messages, sendMessage, status, stop } = useChat({
@@ -128,7 +178,7 @@ export function ChatWindow({
     transport,
     onError: (err) => toast.error(err.message || "Something went wrong"),
     onFinish: () => {
-      refreshCredits();
+      if (!guest) refreshCredits();
     },
   });
 
@@ -136,7 +186,7 @@ export function ChatWindow({
 
   // Persist new messages when streaming finishes
   useEffect(() => {
-    if (status !== "ready") return;
+    if (status !== "ready" || guest) return;
     (async () => {
       for (const m of messages) {
         if (persistedIdsRef.current.has(m.id)) continue;
@@ -228,11 +278,11 @@ export function ChatWindow({
       useModelId = "google/gemini-2.5-pro";
     }
     setModelId(useModelId);
-    if (useModelId !== conversation.model_id) {
+    if (useModelId !== conversation.model_id && !guest) {
       ChatDB.updateConversation(conversation.id, { model_id: useModelId }).catch(console.error);
     }
 
-    if (messages.length === 0) {
+    if (messages.length === 0 && !guest) {
       ChatDB.updateConversation(conversation.id, {
         title: deriveTitle(raw || "Image chat"),
       })
@@ -273,6 +323,7 @@ export function ChatWindow({
   const greetName = firstName(userEmail);
 
   return (
+    <>
     <div className="flex h-full flex-col bg-background">
       <header className="flex items-center justify-between gap-2 border-b border-border bg-background/80 px-3 py-3 backdrop-blur sm:px-6">
         <div className="flex items-center gap-2 min-w-0">
@@ -307,10 +358,10 @@ export function ChatWindow({
                     ? "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400"
                     : "border-primary/30 bg-primary/5 text-primary",
               )}
-              title={`${credits} of ${FREE_CREDITS} free credits remaining`}
+              title={`${credits} of ${totalCredits} free credits remaining`}
             >
               <Zap className="h-3 w-3" />
-              {credits}/{FREE_CREDITS}
+              {credits}/{totalCredits}
             </span>
           )}
           <ModelPicker
@@ -318,7 +369,7 @@ export function ChatWindow({
             onChange={(id) => {
               setModelId(id);
               setAutoMode(false);
-              ChatDB.updateConversation(conversation.id, { model_id: id }).catch(console.error);
+              if (!guest) ChatDB.updateConversation(conversation.id, { model_id: id }).catch(console.error);
             }}
             autoMode={autoMode}
             onAutoToggle={setAutoMode}
@@ -328,7 +379,21 @@ export function ChatWindow({
 
       {outOfCredits && (
         <div className="border-b border-destructive/30 bg-destructive/10 px-4 py-2.5 text-center text-xs font-medium text-destructive sm:px-6">
-          You've used all {FREE_CREDITS} free credits. The free tier is exhausted — thanks for trying TirthoAI!
+          {guest ? (
+            <>
+              You've used all {GUEST_FREE_CREDITS} free guest messages.{" "}
+              <button
+                type="button"
+                onClick={() => setShowSignup(true)}
+                className="underline font-semibold hover:opacity-80"
+              >
+                Sign up to keep going
+              </button>
+              .
+            </>
+          ) : (
+            <>You've used all {FREE_CREDITS} free credits. The free tier is exhausted — thanks for trying TirthoAI!</>
+          )}
         </div>
       )}
 
@@ -503,6 +568,17 @@ export function ChatWindow({
         </div>
       </div>
     </div>
+
+      {guest && (
+        <SignupPrompt
+          open={showSignup}
+          variant={outOfCredits ? "exhausted" : "soft"}
+          onClose={() => setShowSignup(false)}
+          onSignUp={() => onGuestSignUp?.()}
+          onSignIn={() => onGuestSignIn?.()}
+        />
+      )}
+    </>
   );
 }
 

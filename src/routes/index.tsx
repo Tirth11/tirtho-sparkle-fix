@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useSyncExternalStore } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { ChatWindow } from "@/components/ChatWindow";
 import { AuthScreen } from "@/components/AuthScreen";
@@ -8,24 +8,85 @@ import { ChatDB, type DBConversation } from "@/lib/chat-db";
 import { DEFAULT_MODEL } from "@/lib/models";
 import { useAuthSession } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
+import { isGuestMode, enterGuestMode, exitGuestMode } from "@/lib/guest";
 
 export const Route = createFileRoute("/")({
   component: Index,
   ssr: false,
 });
 
+function subscribeGuest(cb: () => void) {
+  window.addEventListener("guest-mode-changed", cb);
+  return () => window.removeEventListener("guest-mode-changed", cb);
+}
+
 function Index() {
   const { session, loading: authLoading } = useAuthSession();
+  const guest = useSyncExternalStore(
+    subscribeGuest,
+    () => isGuestMode(),
+    () => false,
+  );
+  const [authMode, setAuthMode] = useState<"signin" | "signup">("signup");
+  const [forceAuth, setForceAuth] = useState(false);
 
   if (authLoading) {
     return <BrandedLoader label="Checking your session…" />;
   }
 
-  if (!session) {
-    return <AuthScreen />;
+  if (session) {
+    if (guest) exitGuestMode();
+    return <ChatLayout userEmail={session.user.email ?? "User"} userId={session.user.id} />;
   }
 
-  return <ChatLayout userEmail={session.user.email ?? "User"} userId={session.user.id} />;
+  if (guest && !forceAuth) {
+    return (
+      <GuestLayout
+        onGoToAuth={(mode) => {
+          setAuthMode(mode);
+          setForceAuth(true);
+        }}
+      />
+    );
+  }
+
+  return (
+    <AuthScreen
+      initialMode={authMode}
+      onContinueAsGuest={() => {
+        enterGuestMode();
+        setForceAuth(false);
+      }}
+    />
+  );
+}
+
+function GuestLayout({ onGoToAuth }: { onGoToAuth: (mode: "signin" | "signup") => void }) {
+  const conversation: DBConversation = {
+    id: "guest",
+    title: "Guest chat",
+    category: "general",
+    model_id: DEFAULT_MODEL,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+  return (
+    <div className="flex h-screen overflow-hidden bg-background text-foreground">
+      <main className="flex-1 min-w-0">
+        <ChatWindow
+          key="guest"
+          conversation={conversation}
+          onConversationChange={() => {}}
+          onOpenSidebar={() => onGoToAuth("signup")}
+          userEmail="Guest"
+          userId="guest"
+          guest
+          onGuestSignUp={() => onGoToAuth("signup")}
+          onGuestSignIn={() => onGoToAuth("signin")}
+        />
+      </main>
+    </div>
+  );
 }
 
 function ChatLayout({ userEmail, userId }: { userEmail: string; userId: string }) {
@@ -97,14 +158,12 @@ function ChatLayout({ userEmail, userId }: { userEmail: string; userId: string }
 
   const active = conversations.find((c) => c.id === activeId) ?? conversations[0];
 
-  // Update document title with active conversation
   if (typeof document !== "undefined" && active) {
     document.title = `${active.title} — TirthoAI`;
   }
 
   return (
     <div className="flex h-screen overflow-hidden bg-background text-foreground">
-      {/* Sidebar — fixed drawer on mobile, static column on desktop */}
       <Sidebar
         conversations={conversations}
         activeId={activeId}

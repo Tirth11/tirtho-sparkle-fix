@@ -149,12 +149,14 @@ export function Sidebar({
         <div className="px-3 pb-2">
           <button
             onClick={onNew}
+            data-testid="new-chat-button"
             className="flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-primary-foreground shadow-md transition hover:opacity-95 active:scale-[0.98]"
             style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-glow)" }}
           >
             <Plus className="h-4 w-4" />
             New Chat
           </button>
+
         </div>
 
         {/* Search */}
@@ -202,6 +204,9 @@ export function Sidebar({
                           />
                         )}
                         <div
+                          data-testid="conversation-row"
+                          data-conversation-id={c.id}
+                          data-active={active ? "true" : "false"}
                           className={cn(
                             "group flex items-center gap-2 rounded-lg pl-3 pr-1.5 py-2 text-sm transition cursor-pointer",
                             active
@@ -210,6 +215,7 @@ export function Sidebar({
                           )}
                           onClick={() => !isEditing && !isConfirming && onSelect(c.id)}
                         >
+
                           <MessageSquare className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                           {isEditing ? (
                             <input

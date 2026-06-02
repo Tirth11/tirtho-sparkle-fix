@@ -57,22 +57,72 @@ export const Route = createFileRoute("/api/chat")({
         }
 
         const requestedId = typeof modelId === "string" ? modelId : DEFAULT_MODEL;
-        const chosenConfig = getModelById(requestedId);
-        const chosen = chosenConfig?.id ?? DEFAULT_MODEL;
-        const provider = chosenConfig?.provider ?? "lovable";
 
         let model;
-        if (provider === "nvidia") {
-          const nvKey = process.env.NVIDIA_API_KEY;
-          if (!nvKey) {
+        let chosen = DEFAULT_MODEL;
+        let provider: "lovable" | "nvidia" | "user" = "lovable";
+
+        if (isUserModelId(requestedId)) {
+          // User-added (BYO) model — look up row, decrypt key, call OpenAI-compatible endpoint.
+          const rowId = userModelRowId(requestedId);
+          const { data: row, error: rowErr } = await supabaseAdmin
+            .from("user_models")
+            .select("base_url,model_id,api_key_ciphertext,enabled,user_id")
+            .eq("id", rowId)
+            .maybeSingle();
+          if (rowErr || !row || row.user_id !== userId) {
             return new Response(
-              JSON.stringify({ error: "missing_nvidia_key", message: "NVIDIA provider is not configured on the server." }),
+              JSON.stringify({ error: "user_model_not_found", message: "That custom model isn't available." }),
+              { status: 404, headers: { "Content-Type": "application/json" } },
+            );
+          }
+          if (!row.enabled) {
+            return new Response(
+              JSON.stringify({ error: "user_model_disabled", message: "This custom model is disabled. Re-enable it in Settings." }),
+              { status: 400, headers: { "Content-Type": "application/json" } },
+            );
+          }
+          if (!row.api_key_ciphertext) {
+            return new Response(
+              JSON.stringify({ error: "user_model_no_key", message: "This custom model has no API key. Edit it in Settings." }),
+              { status: 400, headers: { "Content-Type": "application/json" } },
+            );
+          }
+          const { decryptSecret } = await import("@/lib/secret-crypto.server");
+          let plainKey: string;
+          try {
+            plainKey = await decryptSecret(row.api_key_ciphertext);
+          } catch {
+            return new Response(
+              JSON.stringify({ error: "user_model_key_decrypt_failed", message: "Stored key can't be decrypted. Re-enter it in Settings." }),
               { status: 500, headers: { "Content-Type": "application/json" } },
             );
           }
-          model = createNvidiaProvider(nvKey)(chosen);
+          chosen = row.model_id;
+          provider = "user";
+          model = createOpenAICompatible({
+            name: "user-byo",
+            baseURL: row.base_url,
+            headers: { Authorization: `Bearer ${plainKey}` },
+          })(chosen);
         } else {
-          model = createLovableAiGatewayProvider(key)(chosen);
+          const chosenConfig = getModelById(requestedId);
+          chosen = chosenConfig?.id ?? DEFAULT_MODEL;
+          const builtinProvider = chosenConfig?.provider ?? "lovable";
+          if (builtinProvider === "nvidia") {
+            const nvKey = process.env.NVIDIA_API_KEY;
+            if (!nvKey) {
+              return new Response(
+                JSON.stringify({ error: "missing_nvidia_key", message: "NVIDIA provider is not configured on the server." }),
+                { status: 500, headers: { "Content-Type": "application/json" } },
+              );
+            }
+            provider = "nvidia";
+            model = createNvidiaProvider(nvKey)(chosen);
+          } else {
+            provider = "lovable";
+            model = createLovableAiGatewayProvider(key)(chosen);
+          }
         }
 
         // Classify provider errors into safe, user-facing messages.

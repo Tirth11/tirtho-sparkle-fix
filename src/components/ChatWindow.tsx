@@ -359,7 +359,10 @@ export function ChatWindow({
 
   return (
     <>
-    <div className="flex h-full min-h-0 flex-col bg-background">
+    <div
+      className="flex h-full min-h-0 flex-col bg-background"
+      style={{ height: "calc(100% - var(--kb-inset, 0px))" }}
+    >
       <header className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border bg-background/80 px-3 py-2.5 backdrop-blur sm:flex-nowrap sm:px-6 sm:py-3">
         <div className="flex items-center gap-2 min-w-0">
           <button

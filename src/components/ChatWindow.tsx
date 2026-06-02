@@ -678,7 +678,7 @@ function AttachmentChip({ file, onRemove }: { file: File; onRemove: () => void }
       {isImage && thumb ? (
         <img
           src={thumb}
-          alt={file.name}
+          alt={`Attached image preview: ${file.name.replace(/\.[^.]+$/, "")}`}
           className="h-6 w-6 rounded object-cover"
         />
       ) : isImage ? (
@@ -746,7 +746,7 @@ function MessageBubble({ message }: { message: UIMessage }) {
                   <img
                     key={i}
                     src={p.url}
-                    alt={p.filename ?? "attachment"}
+                    alt={`Chat image attachment${p.filename ? `: ${p.filename.replace(/\.[^.]+$/, "")}` : ""}`}
                     className="max-h-48 rounded-lg border border-border/30"
                   />
                 ) : (

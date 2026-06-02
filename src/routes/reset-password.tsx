@@ -7,6 +7,24 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/reset-password")({
   component: ResetPasswordPage,
   ssr: false,
+  head: () => ({
+    meta: [
+      { title: "Reset Password — TirthoAI" },
+      {
+        name: "description",
+        content:
+          "Choose a new password for your TirthoAI account and securely regain access to your multi-model AI workspace.",
+      },
+      { property: "og:title", content: "Reset Password — TirthoAI" },
+      {
+        property: "og:description",
+        content: "Set a new password for your TirthoAI account.",
+      },
+      { property: "og:url", content: "https://tirthoai.lovable.app/reset-password" },
+      { name: "robots", content: "noindex" },
+    ],
+    links: [{ rel: "canonical", href: "https://tirthoai.lovable.app/reset-password" }],
+  }),
 });
 
 function ResetPasswordPage() {

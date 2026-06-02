@@ -16,6 +16,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   PROVIDER_PRESETS,
   presetFor,
   type UserModelCategory,
@@ -300,8 +310,31 @@ function ProfileTab({ email }: { email: string }) {
 /* ---------------------- Models tab ---------------------- */
 
 function ModelsTab() {
-  const { models, loading, addModel, updateModel, deleteModel } = useUserModels();
+  const {
+    models,
+    loading,
+    addModel,
+    toggleEnabledOptimistic,
+    deleteModelOptimistic,
+  } = useUserModels();
   const [showForm, setShowForm] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; label: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    const { id, label } = pendingDelete;
+    try {
+      await deleteModelOptimistic(id);
+      toast.success(`Deleted "${label}"`);
+      setPendingDelete(null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't delete model");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -379,12 +412,19 @@ function ModelsTab() {
                         checked={m.enabled}
                         onCheckedChange={async (checked) => {
                           try {
-                            await updateModel({ id: m.id, enabled: checked });
+                            await toggleEnabledOptimistic(m.id, checked);
+                            toast.success(
+                              checked ? `Enabled "${m.label}"` : `Disabled "${m.label}"`,
+                            );
                           } catch (err) {
-                            toast.error(err instanceof Error ? err.message : "Update failed");
+                            toast.error(
+                              err instanceof Error
+                                ? err.message
+                                : `Couldn't ${checked ? "enable" : "disable"} model`,
+                            );
                           }
                         }}
-                        aria-label="Enable model"
+                        aria-label={m.enabled ? "Disable model" : "Enable model"}
                       />
                       <span className="text-xs text-muted-foreground">
                         {m.enabled ? "On" : "Off"}
@@ -394,15 +434,7 @@ function ModelsTab() {
                       variant="ghost"
                       size="icon"
                       className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                      onClick={async () => {
-                        if (!confirm(`Delete "${m.label}"?`)) return;
-                        try {
-                          await deleteModel(m.id);
-                          toast.success("Model removed");
-                        } catch (err) {
-                          toast.error(err instanceof Error ? err.message : "Delete failed");
-                        }
-                      }}
+                      onClick={() => setPendingDelete({ id: m.id, label: m.label })}
                       aria-label="Delete model"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -414,6 +446,38 @@ function ModelsTab() {
           </ul>
         )}
       </SectionCard>
+
+      <AlertDialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => {
+          if (!open && !deleting) setPendingDelete(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this model?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingDelete
+                ? `"${pendingDelete.label}" will be removed from your model picker. Its API key will be permanently deleted. This can't be undone.`
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                void handleConfirmDelete();
+              }}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

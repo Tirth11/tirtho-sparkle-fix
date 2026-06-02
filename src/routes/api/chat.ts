@@ -228,7 +228,10 @@ export const Route = createFileRoute("/api/chat")({
 
           return result.toUIMessageStreamResponse({
             originalMessages: messages as UIMessage[],
-            headers: { "x-credits-remaining": String(remaining ?? "") },
+            headers: {
+              "x-credits-remaining": String(remaining ?? ""),
+              ...(isGuest ? { "x-guest-remaining": String(remaining ?? "") } : {}),
+            },
             onError: (error) => {
               const c = classifyProviderError(error);
               return JSON.stringify({ error: c.code, message: c.message });

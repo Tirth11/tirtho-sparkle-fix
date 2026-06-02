@@ -67,7 +67,10 @@ export const Route = createFileRoute("/api/chat")({
             .select("nvidia_api_key")
             .eq("user_id", userId)
             .maybeSingle();
-          const nvKey = keyRow?.nvidia_api_key?.trim() || process.env.NVIDIA_API_KEY;
+          const { tryDecryptSecret } = await import("@/lib/secret-crypto.server");
+          const stored = keyRow?.nvidia_api_key ?? null;
+          const decoded = tryDecryptSecret(stored)?.trim() || null;
+          const nvKey = decoded || process.env.NVIDIA_API_KEY;
           if (!nvKey) {
             return new Response(
               JSON.stringify({ error: "missing_nvidia_key", message: "NVIDIA_API_KEY is not configured. Set one in Settings." }),
@@ -75,6 +78,7 @@ export const Route = createFileRoute("/api/chat")({
             );
           }
           model = createNvidiaProvider(nvKey)(chosen);
+
         } else {
           model = createLovableAiGatewayProvider(key)(chosen);
         }

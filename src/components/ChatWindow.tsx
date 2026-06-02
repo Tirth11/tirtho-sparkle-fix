@@ -336,6 +336,9 @@ export function ChatWindow({
       useModelId = "google/gemini-2.5-pro";
     }
     setModelId(useModelId);
+    if (useModelId !== modelId) {
+      setPreviousModelId(modelId);
+    }
     if (useModelId !== conversation.model_id) {
       ModelCache.set(conversation.id, useModelId);
       setModelUpdatedAt(new Date().toISOString());

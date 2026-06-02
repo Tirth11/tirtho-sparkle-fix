@@ -23,6 +23,13 @@ import { autoSelectModel, getModelById, CATEGORY_META } from "@/lib/models";
 import { ChatDB, type DBConversation } from "@/lib/chat-db";
 import { supabase } from "@/integrations/supabase/client";
 import { useCredits, FREE_CREDITS } from "@/hooks/use-credits";
+import {
+  GUEST_FREE_CREDITS,
+  getGuestId,
+  getGuestRemaining,
+  setGuestRemaining,
+} from "@/lib/guest";
+import { SignupPrompt } from "@/components/SignupPrompt";
 
 interface Props {
   conversation: DBConversation;
@@ -30,6 +37,9 @@ interface Props {
   onOpenSidebar: () => void;
   userEmail: string;
   userId: string;
+  guest?: boolean;
+  onGuestSignUp?: () => void;
+  onGuestSignIn?: () => void;
 }
 
 const TEXT_EXTS = [".txt", ".md", ".csv", ".json", ".log", ".html", ".xml", ".yaml", ".yml"];

@@ -22,6 +22,7 @@ import { ModelPicker } from "@/components/ModelPicker";
 import { autoSelectModel, getModelById, CATEGORY_META } from "@/lib/models";
 import { ChatDB, type DBConversation } from "@/lib/chat-db";
 import { ModelCache } from "@/lib/model-cache";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { useCredits, FREE_CREDITS } from "@/hooks/use-credits";
 import {

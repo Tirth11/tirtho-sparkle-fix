@@ -177,7 +177,15 @@ export function AuthScreen({ initialMode = "signup", onContinueAsGuest }: AuthSc
               {errors.password && (
                 <p className="mt-1 text-[11px] text-destructive">{errors.password}</p>
               )}
+              {mode === "signup" && !errors.password && (
+                <ul className="mt-1.5 space-y-0.5 text-[11px] text-muted-foreground">
+                  <li>• At least 8 characters</li>
+                  <li>• Letters, numbers, and symbols (!@#$%^&* …) allowed</li>
+                  <li>• Avoid common or previously breached passwords</li>
+                </ul>
+              )}
             </div>
+
 
             {mode === "signup" && (
               <div>

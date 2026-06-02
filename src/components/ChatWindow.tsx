@@ -463,6 +463,7 @@ export function ChatWindow({
             <ModelPicker
               modelId={modelId}
               onChange={(id) => {
+                if (id !== modelId) setPreviousModelId(modelId);
                 setModelId(id);
                 setAutoMode(false);
                 ModelCache.set(conversation.id, id);
@@ -477,12 +478,41 @@ export function ChatWindow({
               onAutoToggle={setAutoMode}
               hideUserModels={guest}
             />
-            <span
-              className="text-[10px] text-muted-foreground/70 tabular-nums"
-              title={`Model last changed at ${new Date(modelUpdatedAt).toLocaleString()} by ${userEmail}`}
-            >
-              changed {formatRelativeTime(modelUpdatedAt)} · {userEmail}
-            </span>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="cursor-help text-[10px] text-muted-foreground/70 tabular-nums">
+                  changed {formatRelativeTime(modelUpdatedAt)} · {userEmail}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" align="end" className="max-w-xs text-xs">
+                <div className="space-y-1">
+                  <div className="font-semibold">Model change</div>
+                  <div>
+                    <span className="text-muted-foreground">Previous: </span>
+                    {previousModelId
+                      ? (getModelById(previousModelId)?.label ?? previousModelId)
+                      : "—"}
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Current: </span>
+                    {getModelById(modelId)?.label ?? modelId}
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">At: </span>
+                    <span className="tabular-nums">
+                      {new Date(modelUpdatedAt).toLocaleString(undefined, {
+                        dateStyle: "medium",
+                        timeStyle: "medium",
+                      })}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">By: </span>
+                    {userEmail}
+                  </div>
+                </div>
+              </TooltipContent>
+            </Tooltip>
           </div>
         </div>
 

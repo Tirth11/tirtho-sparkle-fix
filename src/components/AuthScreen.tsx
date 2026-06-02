@@ -233,6 +233,16 @@ export function AuthScreen({ initialMode = "signup", onContinueAsGuest }: AuthSc
               )}
             </div>
 
+            {submitError && (
+              <div
+                role="alert"
+                className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive"
+              >
+                <div className="font-semibold mb-0.5">Supabase error</div>
+                <div className="break-words font-mono text-[11px] leading-snug">{submitError}</div>
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={loading}

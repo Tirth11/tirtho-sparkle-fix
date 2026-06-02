@@ -1,5 +1,7 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { encryptSecret, tryDecryptSecret } from "@/lib/secret-crypto.server";
 import { createFileRoute } from "@tanstack/react-router";
+
 
 type StatusResponse = {
   lovable: {
@@ -60,10 +62,13 @@ export const Route = createFileRoute("/api/provider-status")({
           .select("nvidia_api_key")
           .eq("user_id", userId)
           .maybeSingle();
-        const userNvidia = keyRow?.nvidia_api_key?.trim() || null;
+        const storedRaw = keyRow?.nvidia_api_key ?? null;
+        const userNvidia = tryDecryptSecret(storedRaw)?.trim() || null;
+        const userKeyCorrupt = !!storedRaw && !userNvidia;
 
         const activeNvidia = userNvidia || envNvidia || null;
         const test = activeNvidia ? await testNvidiaKey(activeNvidia) : null;
+
 
         const payload: StatusResponse = {
           lovable: {
@@ -76,8 +81,11 @@ export const Route = createFileRoute("/api/provider-status")({
             activeSource: userNvidia ? "user" : envNvidia ? "env" : "missing",
             maskedKey: maskKey(activeNvidia),
             testOk: test ? test.ok : null,
-            testError: test?.error,
+            testError: userKeyCorrupt
+              ? "Saved key could not be decrypted; using fallback. Please re-enter."
+              : test?.error,
           },
+
         };
 
         return Response.json(payload);
@@ -106,12 +114,28 @@ export const Route = createFileRoute("/api/provider-status")({
 
         const value = next && next.length > 0 ? next : null;
 
+        let storedValue: string | null = null;
+        if (value) {
+          try {
+            storedValue = encryptSecret(value);
+          } catch (e) {
+            return new Response(
+              JSON.stringify({
+                error: "encrypt_failed",
+                message: e instanceof Error ? e.message : "Could not encrypt key",
+              }),
+              { status: 500, headers: { "Content-Type": "application/json" } },
+            );
+          }
+        }
+
         const { error } = await supabaseAdmin
           .from("user_api_keys")
           .upsert(
-            { user_id: userId, nvidia_api_key: value, updated_at: new Date().toISOString() },
+            { user_id: userId, nvidia_api_key: storedValue, updated_at: new Date().toISOString() },
             { onConflict: "user_id" },
           );
+
 
         if (error) {
           return new Response(

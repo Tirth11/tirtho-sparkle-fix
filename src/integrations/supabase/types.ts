@@ -20,6 +20,7 @@ export type Database = {
           created_at: string
           id: string
           model_id: string
+          model_updated_at: string
           title: string
           updated_at: string
           user_id: string
@@ -29,6 +30,7 @@ export type Database = {
           created_at?: string
           id?: string
           model_id?: string
+          model_updated_at?: string
           title?: string
           updated_at?: string
           user_id: string
@@ -38,6 +40,7 @@ export type Database = {
           created_at?: string
           id?: string
           model_id?: string
+          model_updated_at?: string
           title?: string
           updated_at?: string
           user_id?: string

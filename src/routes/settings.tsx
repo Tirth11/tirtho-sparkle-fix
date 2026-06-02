@@ -37,6 +37,24 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
   ssr: false,
+  head: () => ({
+    meta: [
+      { title: "Settings — TirthoAI" },
+      {
+        name: "description",
+        content:
+          "Manage your TirthoAI profile, password, avatar, and bring-your-own AI model API keys from one secure settings dashboard.",
+      },
+      { property: "og:title", content: "Settings — TirthoAI" },
+      {
+        property: "og:description",
+        content: "Manage your TirthoAI profile and connected AI models.",
+      },
+      { property: "og:url", content: "https://tirthoai.lovable.app/settings" },
+      { name: "robots", content: "noindex" },
+    ],
+    links: [{ rel: "canonical", href: "https://tirthoai.lovable.app/settings" }],
+  }),
 });
 
 function SettingsPage() {
@@ -188,7 +206,7 @@ function ProfileTab({ email }: { email: string }) {
       <SectionCard title="Profile" description="How you appear in TirthoAI.">
         <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
           <Avatar className="h-20 w-20 ring-2 ring-border">
-            {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt="Avatar" />}
+            {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt="User profile photo" />}
             <AvatarFallback
               className="text-xl font-bold text-white"
               style={{ background: "var(--gradient-primary)" }}

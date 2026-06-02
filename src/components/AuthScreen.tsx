@@ -86,7 +86,7 @@ export function AuthScreen({ initialMode = "signup", onContinueAsGuest }: AuthSc
           >
             <Sparkles className="h-7 w-7" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">TirthoAI</h1>
+          <h1 className="text-2xl font-bold tracking-tight">TirthoAI — Your Multi-Model AI Workspace</h1>
           <p className="mt-1 text-xs uppercase tracking-wider text-muted-foreground">
             Your multi-model AI workspace
           </p>

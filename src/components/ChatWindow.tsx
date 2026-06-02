@@ -280,6 +280,7 @@ export function ChatWindow({
     const c = ModelCache.get(conversation.id);
     setModelId(c?.modelId ?? conversation.model_id);
     setModelUpdatedAt(c?.updatedAt ?? conversation.model_updated_at ?? conversation.updated_at);
+    setPreviousModelId(c?.previousModelId);
     setInput("");
     setAttachments([]);
     stickToBottomRef.current = true;

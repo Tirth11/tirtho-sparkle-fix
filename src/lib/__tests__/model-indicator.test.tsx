@@ -1,12 +1,11 @@
 /**
  * Regression test for the per-thread model indicator UI.
  *
- * It mirrors the JSX rendered inside ChatWindow's header (lines ~482–518)
- * so we can verify, without booting the whole chat surface, that:
- *   1. The selected model persists per conversation across a simulated
- *      page refresh (via ModelCache + localStorage).
- *   2. The tooltip displays the previous model name, the new model name,
- *      the changing user, and a precise timestamp.
+ * Mirrors the JSX in ChatWindow's header tooltip (around lines 482–518)
+ * so we can verify, without booting the entire chat surface, that:
+ *   1. Selected model persists per conversation across a simulated refresh.
+ *   2. The tooltip shows previous + new model labels, the changing user,
+ *      and a precise timestamp.
  */
 import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
@@ -35,22 +34,24 @@ function Indicator({
     <TooltipProvider delayDuration={0}>
       <Tooltip>
         <TooltipTrigger asChild>
-          <span data-testid="indicator">
-            changed · {userEmail}
-          </span>
+          <span data-testid="indicator">changed · {userEmail}</span>
         </TooltipTrigger>
         <TooltipContent>
           <div>
-            <div>Previous: {previousModelId ? (getModelById(previousModelId)?.label ?? previousModelId) : "—"}</div>
-            <div>Current: {getModelById(modelId)?.label ?? modelId}</div>
-            <div>
+            <div data-testid="prev-line">
+              Previous: {previousModelId ? (getModelById(previousModelId)?.label ?? previousModelId) : "—"}
+            </div>
+            <div data-testid="curr-line">
+              Current: {getModelById(modelId)?.label ?? modelId}
+            </div>
+            <div data-testid="at-line">
               At:{" "}
               {new Date(modelUpdatedAt).toLocaleString(undefined, {
                 dateStyle: "medium",
                 timeStyle: "medium",
               })}
             </div>
-            <div>By: {userEmail}</div>
+            <div data-testid="by-line">By: {userEmail}</div>
           </div>
         </TooltipContent>
       </Tooltip>
@@ -58,7 +59,7 @@ function Indicator({
   );
 }
 
-describe("Model selection per-conversation persistence + indicator tooltip", () => {
+describe("Per-conversation model persistence + indicator tooltip", () => {
   beforeEach(() => {
     localStorage.clear();
   });
@@ -68,13 +69,11 @@ describe("Model selection per-conversation persistence + indicator tooltip", () 
     const b = MODELS[1].id;
     ModelCache.set("conv-a", a);
     ModelCache.set("conv-b", b);
-
-    // Simulate refresh by re-reading the cache after a notional reload.
     expect(ModelCache.get("conv-a")?.modelId).toBe(a);
     expect(ModelCache.get("conv-b")?.modelId).toBe(b);
   });
 
-  it("tooltip shows previous + current model labels, the user, and a precise timestamp", async () => {
+  it("tooltip shows previous + current labels, user, and precise timestamp", async () => {
     const prev = MODELS[0];
     const curr = MODELS[1];
     const at = new Date("2026-06-02T10:30:00Z").toISOString();
@@ -87,23 +86,21 @@ describe("Model selection per-conversation persistence + indicator tooltip", () 
         userEmail="user@example.com"
       />,
     );
-
     await userEvent.hover(screen.getByTestId("indicator"));
 
-    // Radix portals the tooltip content; use findAllByText for safety.
-    const previousLine = await screen.findByText(new RegExp(`Previous:\\s*${prev.label}`));
-    const currentLine = await screen.findByText(new RegExp(`Current:\\s*${curr.label}`));
-    const byLine = await screen.findByText(/By:\s*user@example\.com/);
     const expectedAt = new Date(at).toLocaleString(undefined, {
       dateStyle: "medium",
       timeStyle: "medium",
     });
-    const atLine = await screen.findByText(new RegExp(`At:\\s*${expectedAt.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
+    const [prevLine] = await screen.findAllByTestId("prev-line");
+    const [currLine] = await screen.findAllByTestId("curr-line");
+    const [atLine] = await screen.findAllByTestId("at-line");
+    const [byLine] = await screen.findAllByTestId("by-line");
 
-    expect(previousLine).toBeInTheDocument();
-    expect(currentLine).toBeInTheDocument();
-    expect(byLine).toBeInTheDocument();
-    expect(atLine).toBeInTheDocument();
+    expect(prevLine).toHaveTextContent(`Previous: ${prev.label}`);
+    expect(currLine).toHaveTextContent(`Current: ${curr.label}`);
+    expect(atLine).toHaveTextContent(`At: ${expectedAt}`);
+    expect(byLine).toHaveTextContent("By: user@example.com");
   });
 
   it("renders an em-dash for previous when the thread has no prior model", async () => {
@@ -116,6 +113,7 @@ describe("Model selection per-conversation persistence + indicator tooltip", () 
       />,
     );
     await userEvent.hover(screen.getByTestId("indicator"));
-    expect(await screen.findByText(/Previous:\s*—/)).toBeInTheDocument();
+    const [prevLine] = await screen.findAllByTestId("prev-line");
+    expect(prevLine).toHaveTextContent("Previous: —");
   });
 });

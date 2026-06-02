@@ -1,8 +1,10 @@
 import { createLovableAiGatewayProvider, createNvidiaProvider } from "@/lib/ai-gateway.server";
 import { DEFAULT_MODEL, getModelById } from "@/lib/models";
+import { isUserModelId, userModelRowId } from "@/lib/user-models-shared";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { createFileRoute } from "@tanstack/react-router";
 import { convertToModelMessages, streamText, type UIMessage } from "ai";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 
 type ChatRequestBody = { messages?: unknown; modelId?: unknown };
 

@@ -83,6 +83,12 @@ export const Route = createFileRoute("/api/chat")({
         let provider: "lovable" | "nvidia" | "user" = "lovable";
 
         if (isUserModelId(requestedId)) {
+          if (isGuest || !userId) {
+            return new Response(
+              JSON.stringify({ error: "guest_no_user_models", message: "Sign up to use custom models." }),
+              { status: 403, headers: { "Content-Type": "application/json" } },
+            );
+          }
           // User-added (BYO) model — look up row, decrypt key, call OpenAI-compatible endpoint.
           const rowId = userModelRowId(requestedId);
           const { data: row, error: rowErr } = await supabaseAdmin

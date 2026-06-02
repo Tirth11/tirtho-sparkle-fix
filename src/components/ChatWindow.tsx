@@ -357,10 +357,10 @@ export function ChatWindow({
                     ? "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400"
                     : "border-primary/30 bg-primary/5 text-primary",
               )}
-              title={`${credits} of ${FREE_CREDITS} free credits remaining`}
+              title={`${credits} of ${totalCredits} free credits remaining`}
             >
               <Zap className="h-3 w-3" />
-              {credits}/{FREE_CREDITS}
+              {credits}/{totalCredits}
             </span>
           )}
           <ModelPicker

@@ -109,6 +109,24 @@ export type Database = {
           },
         ]
       }
+      user_api_keys: {
+        Row: {
+          nvidia_api_key: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          nvidia_api_key?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          nvidia_api_key?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_credits: {
         Row: {
           created_at: string

@@ -11,6 +11,7 @@ import {
   X,
   Check,
   Zap,
+  Settings,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { type DBConversation } from "@/lib/chat-db";
@@ -18,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { useTheme } from "@/hooks/use-theme";
 import { useCredits, FREE_CREDITS } from "@/hooks/use-credits";
 import { CreditsHistoryModal } from "@/components/CreditsHistoryModal";
+import { ProviderSettingsModal } from "@/components/ProviderSettingsModal";
 
 interface Props {
   conversations: DBConversation[];
@@ -74,6 +76,7 @@ export function Sidebar({
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [creditsOpen, setCreditsOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -329,13 +332,23 @@ export function Sidebar({
             </span>
           </button>
 
-          <button
-            onClick={toggle}
-            className="flex w-full items-center justify-center gap-2 rounded-lg border border-sidebar-border bg-background/40 px-3 py-2 text-xs font-medium hover:bg-sidebar-accent/60"
-          >
-            {theme === "dark" ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
-            {theme === "dark" ? "Light mode" : "Dark mode"}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setSettingsOpen(true)}
+              className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-sidebar-border bg-background/40 px-3 py-2 text-xs font-medium hover:bg-sidebar-accent/60"
+              title="Provider settings & API keys"
+            >
+              <Settings className="h-3.5 w-3.5" />
+              Settings
+            </button>
+            <button
+              onClick={toggle}
+              className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-sidebar-border bg-background/40 px-3 py-2 text-xs font-medium hover:bg-sidebar-accent/60"
+            >
+              {theme === "dark" ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+              {theme === "dark" ? "Light" : "Dark"}
+            </button>
+          </div>
           <p className="mt-2 text-center text-[10px] text-muted-foreground">
             Powered by Lovable AI
           </p>
@@ -348,6 +361,7 @@ export function Sidebar({
         userId={userId}
         currentCredits={credits}
       />
+      <ProviderSettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </>
   );
 }

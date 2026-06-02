@@ -378,7 +378,21 @@ export function ChatWindow({
 
       {outOfCredits && (
         <div className="border-b border-destructive/30 bg-destructive/10 px-4 py-2.5 text-center text-xs font-medium text-destructive sm:px-6">
-          You've used all {FREE_CREDITS} free credits. The free tier is exhausted — thanks for trying TirthoAI!
+          {guest ? (
+            <>
+              You've used all {GUEST_FREE_CREDITS} free guest messages.{" "}
+              <button
+                type="button"
+                onClick={() => setShowSignup(true)}
+                className="underline font-semibold hover:opacity-80"
+              >
+                Sign up to keep going
+              </button>
+              .
+            </>
+          ) : (
+            <>You've used all {FREE_CREDITS} free credits. The free tier is exhausted — thanks for trying TirthoAI!</>
+          )}
         </div>
       )}
 

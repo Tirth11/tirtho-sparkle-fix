@@ -109,6 +109,30 @@ export type Database = {
           },
         ]
       }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_api_keys: {
         Row: {
           nvidia_api_key: string | null
@@ -146,6 +170,48 @@ export type Database = {
           created_at?: string
           credits?: number
           total_used?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_models: {
+        Row: {
+          api_key_ciphertext: string | null
+          base_url: string
+          category: string
+          created_at: string
+          enabled: boolean
+          id: string
+          label: string
+          model_id: string
+          provider: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          api_key_ciphertext?: string | null
+          base_url: string
+          category?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          label: string
+          model_id: string
+          provider: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          api_key_ciphertext?: string | null
+          base_url?: string
+          category?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          label?: string
+          model_id?: string
+          provider?: string
           updated_at?: string
           user_id?: string
         }

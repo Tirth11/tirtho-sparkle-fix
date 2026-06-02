@@ -76,6 +76,7 @@ export function Sidebar({
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [creditsOpen, setCreditsOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();

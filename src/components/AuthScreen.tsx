@@ -30,7 +30,8 @@ export function AuthScreen({ initialMode = "signup", onContinueAsGuest }: AuthSc
     if (!email) next.email = "Email is required";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) next.email = "Enter a valid email";
     if (!password) next.password = "Password is required";
-    else if (password.length < 6) next.password = "At least 6 characters";
+    else if (password.length < 8) next.password = "At least 8 characters";
+
     if (mode === "signup") {
       if (!confirm) next.confirm = "Please confirm your password";
       else if (confirm !== password) next.confirm = "Passwords do not match";
@@ -70,10 +71,20 @@ export function AuthScreen({ initialMode = "signup", onContinueAsGuest }: AuthSc
         toast.success("Welcome back!");
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Authentication failed");
+      const raw = err instanceof Error ? err.message : "Authentication failed";
+      let msg = raw;
+      if (/pwned|leaked|compromis|weak.*password|too.*weak/i.test(raw)) {
+        msg = "This password has been found in a data breach. Please choose a stronger, unique password.";
+      } else if (/password.*should be at least|at least 8|minimum.*length/i.test(raw)) {
+        msg = "Password must be at least 8 characters.";
+      } else if (/already registered|already.*exists|user.*exists/i.test(raw)) {
+        msg = "An account with this email already exists. Try signing in instead.";
+      }
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
+
   };
 
   return (
@@ -134,9 +145,10 @@ export function AuthScreen({ initialMode = "signup", onContinueAsGuest }: AuthSc
                     setPassword(e.target.value);
                     if (errors.password) setErrors((p) => ({ ...p, password: undefined }));
                   }}
-                  placeholder="Password (min 6 characters)"
+                  placeholder="Password (min 8 characters)"
                   required
-                  minLength={6}
+                  minLength={8}
+
                   autoComplete={mode === "signin" ? "current-password" : "new-password"}
                   aria-invalid={!!errors.password}
                   className="w-full rounded-lg border border-border bg-background py-2.5 pl-9 pr-10 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 aria-invalid:border-destructive"
@@ -169,7 +181,7 @@ export function AuthScreen({ initialMode = "signup", onContinueAsGuest }: AuthSc
                     }}
                     placeholder="Confirm password"
                     required
-                    minLength={6}
+                    minLength={8}
                     autoComplete="new-password"
                     aria-invalid={!!errors.confirm}
                     className="w-full rounded-lg border border-border bg-background py-2.5 pl-9 pr-3 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 aria-invalid:border-destructive"

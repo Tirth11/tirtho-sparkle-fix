@@ -385,16 +385,19 @@ export function ChatWindow({
     await sendMessage({ text: finalText, files: fileList }, { body: { modelId: useModelId } });
   };
 
-  // Tag each new user message with the model used + credit cost (1 per prompt).
+  // Tag each new user message with the model used + actual credit cost
+  // (computed from the x-credits-remaining header, fallback to 1).
   useEffect(() => {
     const pending = pendingPromptModelRef.current;
     if (!pending) return;
     const lastUser = [...messages].reverse().find((m) => m.role === "user");
     if (lastUser && !promptMeta[lastUser.id]) {
-      setPromptMeta((prev) => ({ ...prev, [lastUser.id]: { modelId: pending, cost: 1 } }));
+      const cost = pendingCostRef.current ?? 1;
+      setPromptMeta((prev) => ({ ...prev, [lastUser.id]: { modelId: pending, cost } }));
       pendingPromptModelRef.current = null;
+      pendingCostRef.current = null;
     }
-  }, [messages, promptMeta]);
+  }, [messages, promptMeta, status]);
 
   const activeModel = getModelById(modelId);
   const cat = activeModel?.category ?? "general";

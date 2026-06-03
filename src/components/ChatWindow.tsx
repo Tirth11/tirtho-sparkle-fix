@@ -630,11 +630,22 @@ export function ChatWindow({
             <MessageBubble key={m.id} message={m} meta={promptMeta[m.id]} />
           ))}
 
-          {status === "submitted" && (
-            <div className="flex justify-end">
-              <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/5 px-2.5 py-1 text-[10px] font-semibold text-primary">
+          {(status === "submitted" || status === "streaming") && (
+            <div className="flex justify-end" data-testid="prompt-progress-pill" data-status={status}>
+              <div
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold",
+                  status === "streaming"
+                    ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                    : "border-primary/30 bg-primary/5 text-primary",
+                )}
+              >
                 <Loader2 className="h-3 w-3 animate-spin" />
-                Sending prompt · −1 credit ·{" "}
+                {status === "submitted" ? "Sending prompt" : "Streaming response"}
+                {pendingCostRef.current !== null && (
+                  <> · −{pendingCostRef.current} credit{pendingCostRef.current === 1 ? "" : "s"}</>
+                )}
+                {" · "}
                 {getModelById(pendingPromptModelRef.current ?? modelId)?.label ?? modelId}
               </div>
             </div>

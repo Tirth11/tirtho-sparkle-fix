@@ -1,7 +1,8 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
-import { useEffect, useMemo, useRef, useState, memo, useDeferredValue } from "react";
-import { renderMarkdown } from "@/lib/markdown-client";
+import { useEffect, useMemo, useRef, useState, memo, useDeferredValue, useCallback } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { renderMarkdown, cancelMarkdown, cancelAllMarkdown } from "@/lib/markdown-client";
 import {
   Send,
   Sparkles,
@@ -219,6 +220,36 @@ export function ChatWindow({
   });
 
   const isLoading = status === "submitted" || status === "streaming";
+
+  // Stable cancel helper: abort the in-flight stream AND drop all queued
+  // markdown work so the worker stops parsing stale bubbles.
+  const abortAll = useCallback(() => {
+    try {
+      stop();
+    } catch {
+      /* ignore */
+    }
+    cancelAllMarkdown();
+  }, [stop]);
+
+  // Abort when switching conversations or unmounting (route change).
+  useEffect(() => {
+    return () => {
+      abortAll();
+    };
+  }, [conversation.id, abortAll]);
+
+  // Abort on page refresh / tab close so the worker doesn't keep grinding.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onUnload = () => abortAll();
+    window.addEventListener("beforeunload", onUnload);
+    window.addEventListener("pagehide", onUnload);
+    return () => {
+      window.removeEventListener("beforeunload", onUnload);
+      window.removeEventListener("pagehide", onUnload);
+    };
+  }, [abortAll]);
 
   // Streaming backpressure: coalesce token-by-token updates into ≤1 paint per frame
   // (and not more often than ~80ms) so the render path can't saturate the main thread.
@@ -438,6 +469,24 @@ export function ChatWindow({
       pendingCostRef.current = null;
     }
   }, [messages, promptMeta, status]);
+
+  // Virtualized message list — keeps DOM small for very long conversations
+  // so scrolling never blocks on thousands of bubbles.
+  const rowVirtualizer = useVirtualizer({
+    count: renderMessages.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => 180,
+    overscan: 6,
+    measureElement: (el) => el.getBoundingClientRect().height,
+    getItemKey: (i) => renderMessages[i]?.id ?? i,
+  });
+
+  // Smart auto-scroll for the virtualizer: jump to last item when sticking.
+  useEffect(() => {
+    if (!stickToBottomRef.current) return;
+    if (renderMessages.length === 0) return;
+    rowVirtualizer.scrollToIndex(renderMessages.length - 1, { align: "end" });
+  }, [renderMessages.length, rowVirtualizer]);
 
   const activeModel = getModelById(modelId);
   const cat = activeModel?.category ?? "general";
@@ -666,9 +715,37 @@ export function ChatWindow({
             </div>
           )}
 
-          {renderMessages.map((m) => (
-            <MessageBubble key={m.id} message={m} meta={promptMeta[m.id]} />
-          ))}
+          {renderMessages.length > 0 && (
+            <div
+              style={{
+                height: `${rowVirtualizer.getTotalSize()}px`,
+                position: "relative",
+                width: "100%",
+              }}
+            >
+              {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                const m = renderMessages[virtualRow.index];
+                if (!m) return null;
+                return (
+                  <div
+                    key={virtualRow.key}
+                    data-index={virtualRow.index}
+                    ref={rowVirtualizer.measureElement}
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      transform: `translateY(${virtualRow.start}px)`,
+                      paddingBottom: "1.25rem",
+                    }}
+                  >
+                    <MessageBubble message={m} meta={promptMeta[m.id]} />
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           {(status === "submitted" || status === "streaming") && (
             <div className="flex justify-end" data-testid="prompt-progress-pill" data-status={status}>
@@ -891,21 +968,22 @@ const AssistantMarkdown = memo(function AssistantMarkdown({
   useEffect(() => {
     if (tooLarge) return;
     let cancelled = false;
-    let supersededHtml: string | null = null;
     renderMarkdown(bubbleId, deferred).then((result) => {
       if (cancelled) return;
       // renderMarkdown resolves stale requests with "" — keep prior HTML in that case.
-      if (result === "" && deferred.length > 0) {
-        supersededHtml = result;
-        return;
-      }
+      if (result === "" && deferred.length > 0) return;
       setHtml(result);
     });
     return () => {
       cancelled = true;
-      void supersededHtml;
     };
   }, [bubbleId, deferred, tooLarge]);
+
+  // When the bubble unmounts (virtualizer scroll-off, conversation switch),
+  // drop any pending worker request for this bubble.
+  useEffect(() => {
+    return () => cancelMarkdown(bubbleId);
+  }, [bubbleId]);
 
   if (tooLarge) {
     return (

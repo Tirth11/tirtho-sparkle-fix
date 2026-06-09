@@ -221,6 +221,36 @@ export function ChatWindow({
 
   const isLoading = status === "submitted" || status === "streaming";
 
+  // Stable cancel helper: abort the in-flight stream AND drop all queued
+  // markdown work so the worker stops parsing stale bubbles.
+  const abortAll = useCallback(() => {
+    try {
+      stop();
+    } catch {
+      /* ignore */
+    }
+    cancelAllMarkdown();
+  }, [stop]);
+
+  // Abort when switching conversations or unmounting (route change).
+  useEffect(() => {
+    return () => {
+      abortAll();
+    };
+  }, [conversation.id, abortAll]);
+
+  // Abort on page refresh / tab close so the worker doesn't keep grinding.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onUnload = () => abortAll();
+    window.addEventListener("beforeunload", onUnload);
+    window.addEventListener("pagehide", onUnload);
+    return () => {
+      window.removeEventListener("beforeunload", onUnload);
+      window.removeEventListener("pagehide", onUnload);
+    };
+  }, [abortAll]);
+
   // Streaming backpressure: coalesce token-by-token updates into ≤1 paint per frame
   // (and not more often than ~80ms) so the render path can't saturate the main thread.
   const [renderMessages, setRenderMessages] = useState<UIMessage[]>(messages);

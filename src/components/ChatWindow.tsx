@@ -1001,7 +1001,7 @@ const MessageBubble = memo(function MessageBubble({
             <p className="whitespace-pre-wrap break-words">{text}</p>
           ) : (
             <div className="prose prose-sm dark:prose-invert max-w-none break-words prose-pre:overflow-x-auto prose-pre:bg-muted prose-pre:text-foreground prose-code:before:content-none prose-code:after:content-none prose-code:rounded prose-code:bg-muted prose-code:px-1 prose-code:py-0.5">
-              <AssistantMarkdown text={text} />
+              <AssistantMarkdown bubbleId={message.id} text={text} />
             </div>
           )}
         </div>

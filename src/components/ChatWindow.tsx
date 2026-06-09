@@ -715,9 +715,37 @@ export function ChatWindow({
             </div>
           )}
 
-          {renderMessages.map((m) => (
-            <MessageBubble key={m.id} message={m} meta={promptMeta[m.id]} />
-          ))}
+          {renderMessages.length > 0 && (
+            <div
+              style={{
+                height: `${rowVirtualizer.getTotalSize()}px`,
+                position: "relative",
+                width: "100%",
+              }}
+            >
+              {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                const m = renderMessages[virtualRow.index];
+                if (!m) return null;
+                return (
+                  <div
+                    key={virtualRow.key}
+                    data-index={virtualRow.index}
+                    ref={rowVirtualizer.measureElement}
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      transform: `translateY(${virtualRow.start}px)`,
+                      paddingBottom: "1.25rem",
+                    }}
+                  >
+                    <MessageBubble message={m} meta={promptMeta[m.id]} />
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           {(status === "submitted" || status === "streaming") && (
             <div className="flex justify-end" data-testid="prompt-progress-pill" data-status={status}>

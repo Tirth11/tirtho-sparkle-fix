@@ -718,7 +718,15 @@ export function ChatWindow({
             </div>
           )}
 
-          {renderMessages.length > 0 && (
+          {renderMessages.length > 0 && !shouldVirtualize && (
+            <div className="space-y-5 sm:space-y-6">
+              {renderMessages.map((m) => (
+                <MessageBubble key={m.id} message={m} meta={promptMeta[m.id]} />
+              ))}
+            </div>
+          )}
+
+          {renderMessages.length > 0 && shouldVirtualize && (
             <div
               style={{
                 height: `${rowVirtualizer.getTotalSize()}px`,

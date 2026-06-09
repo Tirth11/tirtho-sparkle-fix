@@ -1,7 +1,8 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
-import { useEffect, useMemo, useRef, useState, memo, useDeferredValue } from "react";
-import { renderMarkdown } from "@/lib/markdown-client";
+import { useEffect, useMemo, useRef, useState, memo, useDeferredValue, useCallback } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { renderMarkdown, cancelMarkdown, cancelAllMarkdown } from "@/lib/markdown-client";
 import {
   Send,
   Sparkles,

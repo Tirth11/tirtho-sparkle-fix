@@ -295,7 +295,7 @@ export function ChatWindow({
     const el = scrollRef.current;
     if (!el) return;
     el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-  }, [messages, status]);
+  }, [renderMessages, status]);
 
   // Mobile keyboard handling: track visualViewport so the input stays above
   // the on-screen keyboard, and keep the latest message in view when it opens.

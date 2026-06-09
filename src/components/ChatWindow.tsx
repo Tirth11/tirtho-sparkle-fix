@@ -1,7 +1,7 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { useEffect, useMemo, useRef, useState, memo, useDeferredValue } from "react";
-import ReactMarkdown from "react-markdown";
+import { renderMarkdown } from "@/lib/markdown-client";
 import {
   Send,
   Sparkles,

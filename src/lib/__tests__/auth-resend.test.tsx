@@ -78,10 +78,11 @@ describe("AuthScreen resend verification — unknown failure UI consistency", ()
     // Friendly fallback message is shown in the toast.
     expect(toastError.mock.calls.at(-1)?.[0]).toMatch(/couldn't resend|try again/i);
 
-    // Inline error must mirror toast (no desync between toast + UI).
+    // Inline message must mirror toast (no desync). Notice was already
+    // showing, so the failure text replaces the notice body.
     await waitFor(() => {
-      const alert = screen.getByRole("alert");
-      expect(alert.textContent ?? "").toMatch(/couldn't resend|try again/i);
+      const status = screen.getByRole("status");
+      expect(status.textContent ?? "").toMatch(/couldn't resend|try again/i);
     });
 
     // Button must NOT be stuck in "Resending…" state.

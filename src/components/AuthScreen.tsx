@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Sparkles, Loader2, Mail, Lock, Eye, EyeOff, Gift } from "lucide-react";
 import { toast } from "sonner";
@@ -29,8 +29,20 @@ export function AuthScreen({ initialMode = "signup", onContinueAsGuest }: AuthSc
   const [notice, setNotice] = useState<string | null>(null);
   const [showResend, setShowResend] = useState(false);
   const [resending, setResending] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const t = setInterval(() => {
+      setResendCooldown((s) => (s <= 1 ? 0 : s - 1));
+    }, 1000);
+    return () => clearInterval(t);
+  }, [resendCooldown]);
+
+  const resendDisabled = resending || resendCooldown > 0;
 
   const handleResendVerification = async () => {
+    if (resendDisabled) return;
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       toast.error("Enter your email above first, then tap Resend.");
       return;
@@ -47,12 +59,14 @@ export function AuthScreen({ initialMode = "signup", onContinueAsGuest }: AuthSc
       setNotice(
         `We re-sent the verification email to ${email}. Check your inbox (and spam folder), click the link, then sign in.`,
       );
+      setResendCooldown(60);
     } catch (err) {
       const raw = err instanceof Error ? err.message : "Couldn't resend verification email";
       const lower = raw.toLowerCase();
       let friendly = raw;
       if (/rate.?limit|too many|for security/i.test(lower)) {
         friendly = "Please wait a minute before requesting another verification email.";
+        setResendCooldown(60);
       } else if (/already.*confirmed|already.*verified/i.test(lower)) {
         friendly = "This email is already verified — try signing in.";
       }
@@ -317,12 +331,17 @@ export function AuthScreen({ initialMode = "signup", onContinueAsGuest }: AuthSc
                   <button
                     type="button"
                     onClick={handleResendVerification}
-                    disabled={resending}
+                    disabled={resendDisabled}
+                    aria-disabled={resendDisabled}
                     data-testid="resend-verification-btn"
-                    className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-primary/40 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary hover:bg-primary/15 disabled:opacity-60"
+                    className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-primary/40 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary hover:bg-primary/15 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {resending && <Loader2 className="h-3 w-3 animate-spin" />}
-                    {resending ? "Resending…" : "Resend verification email"}
+                    {resending
+                      ? "Resending…"
+                      : resendCooldown > 0
+                        ? `Resend in ${resendCooldown}s`
+                        : "Resend verification email"}
                   </button>
                 )}
               </div>
@@ -344,12 +363,17 @@ export function AuthScreen({ initialMode = "signup", onContinueAsGuest }: AuthSc
                   <button
                     type="button"
                     onClick={handleResendVerification}
-                    disabled={resending}
+                    disabled={resendDisabled}
+                    aria-disabled={resendDisabled}
                     data-testid="resend-verification-btn"
-                    className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-destructive/40 bg-destructive/10 px-2.5 py-1 text-[11px] font-semibold text-destructive hover:bg-destructive/15 disabled:opacity-60"
+                    className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-destructive/40 bg-destructive/10 px-2.5 py-1 text-[11px] font-semibold text-destructive hover:bg-destructive/15 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {resending && <Loader2 className="h-3 w-3 animate-spin" />}
-                    {resending ? "Resending…" : "Resend verification email"}
+                    {resending
+                      ? "Resending…"
+                      : resendCooldown > 0
+                        ? `Resend in ${resendCooldown}s`
+                        : "Resend verification email"}
                   </button>
                 )}
               </div>

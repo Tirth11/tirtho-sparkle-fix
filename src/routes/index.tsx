@@ -6,9 +6,11 @@ import { AuthScreen } from "@/components/AuthScreen";
 import { BrandedLoader } from "@/components/BrandedLoader";
 import { ChatDB, type DBConversation } from "@/lib/chat-db";
 import { DEFAULT_MODEL } from "@/lib/models";
+import { ModelCache } from "@/lib/model-cache";
 import { useAuthSession } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { isGuestMode, enterGuestMode, exitGuestMode } from "@/lib/guest";
+
 
 export const Route = createFileRoute("/")({
   component: Index,

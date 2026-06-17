@@ -25,6 +25,9 @@ export function AuthScreen({ initialMode = "signup", onContinueAsGuest }: AuthSc
     confirm?: string;
   }>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitErrorHint, setSubmitErrorHint] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
 
 
   const validate = (): boolean => {

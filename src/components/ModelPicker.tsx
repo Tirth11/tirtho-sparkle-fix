@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from "react";
-import { Check, ChevronDown, Zap, Plus, AlertCircle } from "lucide-react";
+import { Check, ChevronDown, Zap, Plus, AlertCircle, AlertTriangle } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { MODELS, CATEGORY_META, type ModelCategory, getModelById } from "@/lib/models";
 import { USER_MODEL_PREFIX, presetFor, type UserModelDTO } from "@/lib/user-models-shared";
 import { useUserModels } from "@/hooks/use-user-models";
 import { useModelHealth } from "@/hooks/use-model-health";
+import { pickHealthyFallback, isModelDown } from "@/lib/model-fallback";
 import { cn } from "@/lib/utils";
 
 interface Props {

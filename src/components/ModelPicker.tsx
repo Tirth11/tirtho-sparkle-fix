@@ -184,7 +184,9 @@ export function ModelPicker({ modelId, onChange, autoMode, onAutoToggle, hideUse
               </Link>
             )}
           </div>
+          </>
         )}
+
       </div>
     </div>
   );

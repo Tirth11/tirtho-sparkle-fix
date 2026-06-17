@@ -808,7 +808,7 @@ export function ChatWindow({
       <div
         className="shrink-0 border-t border-border bg-background/80 px-3 py-3 backdrop-blur sm:px-6 sm:py-4"
         style={{
-          paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))",
+          paddingBottom: "calc(max(0.75rem, env(safe-area-inset-bottom)) + var(--kb-inset, 0px))",
           paddingLeft: "max(0.75rem, env(safe-area-inset-left))",
           paddingRight: "max(0.75rem, env(safe-area-inset-right))",
         }}

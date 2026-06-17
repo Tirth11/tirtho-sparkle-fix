@@ -4,6 +4,8 @@ import { toast } from "sonner";
 import { MODELS, getModelById, DEFAULT_MODEL } from "@/lib/models";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { useModelHealth } from "@/hooks/use-model-health";
+import { isModelDown } from "@/lib/model-fallback";
 import type { UIMessage } from "ai";
 import type { CompareResult } from "@/routes/api/chat.compare";
 

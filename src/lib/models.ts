@@ -1,6 +1,6 @@
 export type ModelCategory = "reasoning" | "coding" | "creative" | "vision" | "general";
 
-export type ModelProvider = "lovable" | "nvidia" | "anthropic" | "perplexity";
+export type ModelProvider = "lovable" | "nvidia" | "anthropic" | "perplexity" | "groq";
 
 export interface ModelConfig {
   label: string;
@@ -46,6 +46,16 @@ export const MODELS: ModelConfig[] = [
   { label: "GPT-OSS 20B", id: "openai/gpt-oss-20b", provider: "nvidia", category: "general", badge: "🔓", description: "OpenAI GPT-OSS 20B via NVIDIA" },
   { label: "Mistral Medium 3.5", id: "mistralai/mistral-medium-3.5-128b", provider: "nvidia", category: "general", badge: "🌬️", description: "Mistral Medium 3.5 via NVIDIA" },
   { label: "Mistral Small 4", id: "mistralai/mistral-small-4-119b-2603", provider: "nvidia", category: "general", badge: "💨", description: "Mistral Small 4 via NVIDIA" },
+
+  // Groq-hosted (ultra-low latency LPU inference)
+  { label: "Llama 3.3 70B (Groq)", id: "llama-3.3-70b-versatile", provider: "groq", category: "general", badge: "⚡", description: "Meta Llama 3.3 70B on Groq LPU — ultra-fast" },
+  { label: "Llama 3.1 8B Instant", id: "llama-3.1-8b-instant", provider: "groq", category: "general", badge: "🚀", description: "Tiny + lightning-fast Llama on Groq" },
+  { label: "Llama 4 Scout 17B", id: "meta-llama/llama-4-scout-17b-16e-instruct", provider: "groq", category: "reasoning", badge: "🦅", description: "Llama 4 Scout MoE on Groq" },
+  { label: "Llama 4 Maverick 17B", id: "meta-llama/llama-4-maverick-17b-128e-instruct", provider: "groq", category: "reasoning", badge: "🛩️", description: "Llama 4 Maverick MoE on Groq" },
+  { label: "Kimi K2 (Groq)", id: "moonshotai/kimi-k2-instruct", provider: "groq", category: "creative", badge: "🌙", description: "Moonshot Kimi K2 on Groq" },
+  { label: "Qwen 3 32B (Groq)", id: "qwen/qwen3-32b", provider: "groq", category: "coding", badge: "🧩", description: "Qwen3 32B coder on Groq" },
+  { label: "GPT-OSS 120B (Groq)", id: "openai/gpt-oss-120b", provider: "groq", category: "reasoning", badge: "🔓", description: "OpenAI GPT-OSS 120B on Groq" },
+  { label: "GPT-OSS 20B (Groq)", id: "openai/gpt-oss-20b", provider: "groq", category: "general", badge: "🪶", description: "OpenAI GPT-OSS 20B on Groq" },
 ];
 
 

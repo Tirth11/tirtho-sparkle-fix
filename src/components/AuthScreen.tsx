@@ -137,7 +137,8 @@ export function AuthScreen({ initialMode = "signup", onContinueAsGuest }: AuthSc
         hint = "Double-check your password, or use 'Forgot password?' to reset it.";
       } else if (/email.*not.*confirmed|not.*verified|confirm.*email/i.test(lower)) {
         friendly = "Your email address isn't verified yet.";
-        hint = `Check ${email || "your inbox"} for the verification link we sent during signup.`;
+        hint = `Check ${email || "your inbox"} for the verification link, or tap "Resend verification email" below.`;
+        setShowResend(true);
       } else if (/already.*registered|already.*exists|user.*exists|duplicate/i.test(lower)) {
         friendly = "An account with this email already exists.";
         hint = "Try signing in instead, or use 'Forgot password?' if you don't remember it.";

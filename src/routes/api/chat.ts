@@ -1,4 +1,4 @@
-import { createLovableAiGatewayProvider, createNvidiaProvider, createAnthropicProvider, createPerplexityProvider } from "@/lib/ai-gateway.server";
+import { createLovableAiGatewayProvider, createNvidiaProvider, createAnthropicProvider, createPerplexityProvider, createGroqProvider } from "@/lib/ai-gateway.server";
 import { DEFAULT_MODEL, getModelById } from "@/lib/models";
 import { isUserModelId, userModelRowId } from "@/lib/user-models-shared";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
@@ -80,7 +80,7 @@ export const Route = createFileRoute("/api/chat")({
 
         let model;
         let chosen = DEFAULT_MODEL;
-        let provider: "lovable" | "nvidia" | "anthropic" | "perplexity" | "user" = "lovable";
+        let provider: "lovable" | "nvidia" | "anthropic" | "perplexity" | "groq" | "user" = "lovable";
 
         if (isUserModelId(requestedId)) {
           if (isGuest || !userId) {
@@ -198,6 +198,16 @@ export const Route = createFileRoute("/api/chat")({
             }
             provider = "perplexity";
             model = createPerplexityProvider(pKey)(chosen);
+          } else if (builtinProvider === "groq") {
+            const gKey = process.env.GROQ_API_KEY;
+            if (!gKey) {
+              return new Response(
+                JSON.stringify({ error: "missing_groq_key", message: "Groq isn't configured on the server." }),
+                { status: 500, headers: { "Content-Type": "application/json" } },
+              );
+            }
+            provider = "groq";
+            model = createGroqProvider(gKey)(chosen);
           } else {
             provider = "lovable";
             model = createLovableAiGatewayProvider(key)(chosen);
